@@ -7,13 +7,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str = Field(alias="DATABASE_URL")
 
-    s3_endpoint: str = Field(alias="S3_ENDPOINT")
-    s3_access_key: str = Field(alias="S3_ACCESS_KEY")
-    s3_secret_key: str = Field(alias="S3_SECRET_KEY")
+    s3_endpoint: str = Field(default="http://localhost:9000", alias="S3_ENDPOINT")
+    s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
     s3_bucket: str = Field(default="claim-evidence", alias="S3_BUCKET")
-    s3_secure: bool = Field(default=True, alias="S3_SECURE")
+    s3_secure: bool = Field(default=False, alias="S3_SECURE")
 
-    qdrant_url: str = Field(alias="QDRANT_URL")
+    qdrant_url: str = Field(default="http://localhost:6333", alias="QDRANT_URL")
     qdrant_api_key: str = Field(default="", alias="QDRANT_API_KEY")
     qdrant_collection: str = Field(default="claim_policies", alias="QDRANT_COLLECTION")
 
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     investigation_version: str = Field(default="v1.0", alias="INVESTIGATION_VERSION")
 
-    cors_origins: str = Field(default="http://localhost:5173", alias="CORS_ORIGINS")
+    cors_origins: str = Field(default="*", alias="CORS_ORIGINS")
 
     jwt_secret: str = Field(default="supersecretkey", alias="JWT_SECRET")
     jwt_expiration_minutes: int = Field(default=60, alias="JWT_EXPIRATION_MINUTES")
