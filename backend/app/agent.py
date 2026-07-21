@@ -14,7 +14,14 @@ from app.config import get_settings
 
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
+try:
+    from langchain.agents import AgentExecutor, create_tool_calling_agent
+except (ImportError, AttributeError):
+    try:
+        from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
+    except (ImportError, AttributeError):
+        AgentExecutor = None
+        create_tool_calling_agent = None
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 
