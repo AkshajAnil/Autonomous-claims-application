@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  nginx_load_balancer:
+    image: nginx:latest
+    container_name: claims_nginx_lb
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend1
+      - backend2
+      - backend3
+      - frontend
+
+  backend1:
+    build: ./backend
+    container_name: claims_backend_1
+    environment:
+      - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
+    depends_on:
+      - postgres_db
+
+  backend2:
+    build: ./backend
+    container_name: claims_backend_2
+    environment:
+      - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
+    depends_on:
+      - postgres_db
+
+  backend3:
+    build: ./backend
+    container_name: claims_backend_3
+    environment:
+      - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
+    depends_on:
+      - postgres_db
+
+  frontend:
+    build: ./frontend
+    container_name: claims_frontend
+
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: claims_postgres
+    environment:
+      POSTGRES_USER: claims_user
+      POSTGRES_PASSWORD: claims_pass
+      POSTGRES_DB: claims_db
+    ports:
+      - "5432:5432"

@@ -1,0 +1,28 @@
+# Python Virtual Environments
+backend/.venv/
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/*.pyc
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Databases & Configs
+*.db
+*.sqlite3
+backend/app/artifacts/*.json
+!backend/app/artifacts/.gitkeep
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+
+# IDEs & System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
