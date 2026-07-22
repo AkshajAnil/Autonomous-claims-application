@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.database import SessionLocal, get_db, init_db
 from app.models import Claim, Evidence, User, AuditLog, ClaimStatus
 from app.repository import claim_with_children, log_audit
-from app.schemas import ClaimOut, UserCreate, UserOut, AuditLogOut, AdjudicationRequest, EmployeeCreate, PasswordChangeRequest, SelfResetPasswordRequest
+from app.schemas import ClaimOut, UserCreate, UserOut, AuditLogOut, AdjudicationRequest, EmployeeCreate, PasswordChangeRequest, SelfResetPasswordRequest, TokenResetPasswordRequest
 from app.storage import assert_storage_ready, save_upload
 from app.auth import get_password_hash, verify_password, create_access_token, logout_user, get_current_user
 
@@ -565,16 +565,22 @@ def create_employee(
         if not db.query(User).filter(User.customer_id == emp_id).first():
             break
             
+    # Generate one-time password setup token (valid for 7 days)
+    setup_token = secrets.token_urlsafe(32)
+    token_expires = datetime.datetime.utcnow() + datetime.timedelta(days=7)
+    
     emp = User(
         username=username,
-        password_hash=get_password_hash(req.temporary_password),
+        password_hash=get_password_hash(req.temporary_password or secrets.token_urlsafe(12)),
         customer_id=emp_id,
         role=req.role,
         full_name=req.full_name,
         is_identity_verified=True,
         email=req.email,
         must_change_password=True,
-        is_active=True
+        is_active=True,
+        reset_token=setup_token,
+        reset_token_expires_at=token_expires
     )
     db.add(emp)
     db.commit()
@@ -582,10 +588,49 @@ def create_employee(
     
     log_audit(db, current_user.id, "Employee Created", {
         "employee_id": emp.id,
+        "username": emp.username,
         "email": req.email,
         "role": req.role
     })
-    return emp
+    return {
+        "id": emp.id,
+        "username": emp.username,
+        "customer_id": emp.customer_id,
+        "role": emp.role,
+        "full_name": emp.full_name,
+        "email": emp.email,
+        "setup_token": setup_token,
+        "activation_link": f"/setup-password?token={setup_token}"
+    }
+
+
+@app.get("/setup-password/verify")
+def verify_setup_token(token: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reset_token == token).first()
+    if not user or (user.reset_token_expires_at and user.reset_token_expires_at < datetime.datetime.utcnow()):
+        raise HTTPException(status_code=400, detail="Invalid or expired password activation token.")
+    return {
+        "username": user.username,
+        "full_name": user.full_name,
+        "role": user.role,
+        "email": user.email
+    }
+
+
+@app.post("/setup-password")
+def setup_password(req: TokenResetPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reset_token == req.token).first()
+    if not user or (user.reset_token_expires_at and user.reset_token_expires_at < datetime.datetime.utcnow()):
+        raise HTTPException(status_code=400, detail="Invalid or expired password activation token.")
+        
+    user.password_hash = get_password_hash(req.new_password)
+    user.must_change_password = False
+    user.reset_token = None
+    user.reset_token_expires_at = None
+    user.is_active = True
+    db.commit()
+    log_audit(db, user.id, "Account Password Established", {"username": user.username, "role": user.role})
+    return {"message": "Account password set successfully! You may now log in with your credentials."}
 
 
 @app.post("/admin/users/{user_id}/status", response_model=UserOut)

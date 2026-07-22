@@ -215,3 +215,8 @@ class SelfResetPasswordRequest(BaseModel):
     username: str
     customer_id: str
     new_password: str
+
+
+class TokenResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str

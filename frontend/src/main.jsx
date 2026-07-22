@@ -83,6 +83,14 @@ function App() {
     [claims, selectedId],
   );
 
+  // Activation / Setup Token Link State
+  const [tokenFromUrl, setTokenFromUrl] = useState('');
+  const [tokenUserInfo, setTokenUserInfo] = useState(null);
+  const [tokenNewPassword, setTokenNewPassword] = useState('');
+  const [tokenError, setTokenError] = useState('');
+  const [tokenSuccess, setTokenSuccess] = useState('');
+  const [createdEmployeeInfo, setCreatedEmployeeInfo] = useState(null);
+
   async function checkAuth() {
     try {
       const response = await fetch(`${API_BASE}/me`, {credentials: 'include'});
@@ -102,7 +110,52 @@ function App() {
     }
   }
 
+  async function verifyToken(t) {
+    try {
+      const res = await fetch(`${API_BASE}/setup-password/verify?token=${t}`);
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || 'Invalid or expired password activation link.');
+      }
+      const data = await res.json();
+      setTokenUserInfo(data);
+    } catch (e) {
+      setTokenError(e.message);
+    }
+  }
+
+  async function handleTokenPasswordSetup(e) {
+    e.preventDefault();
+    setTokenError('');
+    setTokenSuccess('');
+    try {
+      const res = await fetch(`${API_BASE}/setup-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tokenFromUrl, new_password: tokenNewPassword })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || 'Password setup failed.');
+      }
+      setTokenSuccess('Password set successfully! Redirecting to login...');
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTokenFromUrl('');
+        setTokenUserInfo(null);
+      }, 2000);
+    } catch (err) {
+      setTokenError(err.message);
+    }
+  }
+
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('setup_token') || params.get('token');
+    if (token) {
+      setTokenFromUrl(token);
+      verifyToken(token);
+    }
     checkAuth();
   }, []);
 
@@ -489,6 +542,48 @@ function App() {
 
   if (isAuthChecking) {
     return <main className="shell"><div className="loading-container">Loading terminal...</div></main>;
+  }
+
+  // Render Token Password Setup Screen (from email activation link)
+  if (tokenFromUrl) {
+    return (
+      <main className="shell auth-shell">
+        <div style={{ maxWidth: '460px', margin: '3rem auto', width: '100%' }}>
+          <div className="brand-header">
+            <Key size={40} className="brand-icon" />
+            <h1>Enterprise Account Setup</h1>
+            <p className="brand-sub">Establish Corporate Password via One-Time Token</p>
+          </div>
+          <form className="panel claim-form" onSubmit={handleTokenPasswordSetup}>
+            <h2>Complete Profile Setup</h2>
+            {tokenError && <div className="error-banner">{tokenError}</div>}
+            {tokenSuccess && <div className="status-pill" style={{ display: 'block', width: '100%', marginBottom: '12px', background: '#dcfce7', color: '#166534' }}>{tokenSuccess}</div>}
+            
+            {tokenUserInfo && (
+              <div style={{ background: 'var(--mono-surface-dark)', padding: '10px 14px', borderRadius: '6px', fontSize: '12px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div><strong>Employee Name:</strong> {tokenUserInfo.full_name}</div>
+                <div><strong>Generated Username:</strong> <code style={{ background: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{tokenUserInfo.username}</code></div>
+                <div><strong>Role:</strong> {tokenUserInfo.role?.toUpperCase()}</div>
+                <div><strong>Email:</strong> {tokenUserInfo.email}</div>
+              </div>
+            )}
+
+            <div className="input-group">
+              <label>Set Permanent Corporate Password</label>
+              <input 
+                type="password"
+                placeholder="••••••••" 
+                value={tokenNewPassword}
+                onChange={(e) => setTokenNewPassword(e.target.value)}
+                required 
+              />
+            </div>
+
+            <button type="submit" disabled={!tokenUserInfo}>Save Password & Activate Account</button>
+          </form>
+        </div>
+      </main>
+    );
   }
 
   // Render password change screen if forced change is active
@@ -1861,8 +1956,34 @@ function App() {
 
               {/* Create Employee Box */}
               <form className="panel claim-form" onSubmit={handleCreateEmployee} style={{ gridArea: 'auto' }}>
-                <h2>Provision Employee</h2>
-                {empSuccessMsg && <div className="status-pill" style={{ display: 'block', width: '100%', marginBottom: '12px' }}>{empSuccessMsg}</div>}
+                <h2>Provision Employee Profile</h2>
+                {empSuccessMsg && <div className="status-pill" style={{ display: 'block', width: '100%', marginBottom: '12px', background: '#dcfce7', color: '#166534' }}>{empSuccessMsg}</div>}
+                
+                {createdEmployeeInfo && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '6px', marginBottom: '14px', fontSize: '12px', color: '#166534' }}>
+                    <strong>🔗 One-Time Password Setup Link:</strong>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                      <input 
+                        readOnly 
+                        value={createdEmployeeInfo.activation_url} 
+                        style={{ fontSize: '11px', background: '#fff', padding: '4px 8px', border: '1px solid #86efac', flex: 1 }}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdEmployeeInfo.activation_url);
+                          alert('Activation Link copied to clipboard!');
+                        }}
+                        style={{ padding: '4px 10px', fontSize: '11px', background: '#166534', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                    <small style={{ display: 'block', marginTop: '4px', color: '#15803d' }}>
+                      Share this activation link with <strong>{createdEmployeeInfo.full_name}</strong> to let them establish their corporate password.
+                    </small>
+                  </div>
+                )}
                 
                 <div className="input-group">
                   <label>Full Name</label>
