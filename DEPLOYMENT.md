@@ -16,7 +16,7 @@ graph TD
     
     Backend -->|Database Queries| Postgres[(🐘 PostgreSQL Database)]
     Backend -->|Session Tokens| Redis[(⚡ Redis Cache)]
-    Backend -->|Evidence Storage| Storage[(📦 Local Storage / Optional Backblaze B2 S3)]
+    Backend -->|Evidence Storage| Storage[(📦 Backblaze B2 S3 Object Storage)]
 ```
 
 ---
@@ -54,8 +54,7 @@ JWT_SECRET=supersecretkey
 JWT_EXPIRATION_MINUTES=60
 INVESTIGATION_VERSION=v1.0
 
-# OPTIONAL: Backblaze B2 / S3 Object Storage
-# If omitted or left blank, backend automatically uses local file storage!
+# Backblaze B2 S3 Object Storage (REQUIRED for Evidence Storage)
 S3_ENDPOINT=s3.us-west-004.backblazeb2.com
 S3_ACCESS_KEY=your_backblaze_key_id
 S3_SECRET_KEY=your_backblaze_application_key
@@ -108,7 +107,10 @@ Deploy the [`backend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-0
   - `REDIS_URL`: *(Your Managed Redis Connection String)*
   - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
   - `PYTHON_VERSION`: `3.11.9`
-  - `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`: *(Optional Backblaze B2 credentials)*
+  - `S3_ENDPOINT`: `s3.us-west-004.backblazeb2.com` *(REQUIRED)*
+  - `S3_ACCESS_KEY`: *(Your Backblaze B2 keyID - REQUIRED)*
+  - `S3_SECRET_KEY`: *(Your Backblaze B2 applicationKey - REQUIRED)*
+  - `S3_BUCKET`: *(Your Backblaze B2 bucket name - REQUIRED)*
 
 ### 4. Frontend Microservice Deployment (Vercel / Netlify / AWS S3)
 Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-01/most-credit-scoring-is-built-around/claims-agent/frontend) directory:
@@ -124,13 +126,13 @@ Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-
 | :--- | :---: | :--- | :--- |
 | `DATABASE_URL` | **YES** | `postgresql://...` | PostgreSQL connection string |
 | `GEMINI_API_KEY` | **YES** | `""` | Google Gemini API key for multimodal vision & LLM |
+| `S3_ENDPOINT` | **YES** | `s3.us-west-004.backblazeb2.com` | Backblaze B2 S3 Endpoint URL |
+| `S3_ACCESS_KEY` | **YES** | `""` | Backblaze B2 `keyID` |
+| `S3_SECRET_KEY` | **YES** | `""` | Backblaze B2 `applicationKey` |
+| `S3_BUCKET` | **YES** | `claim-evidence` | Backblaze B2 target bucket name |
 | `REDIS_URL` | OPTIONAL | `redis://localhost:6379/0` | Redis session cache URL (falls back to memory if offline) |
 | `JWT_SECRET` | **YES** | `supersecretkey` | HMAC SHA-256 key for signing auth tokens |
 | `JWT_EXPIRATION_MINUTES` | OPTIONAL | `60` | JWT token expiration time in minutes |
-| `S3_ENDPOINT` | **OPTIONAL** | `http://localhost:9000` | Backblaze B2 / S3 Endpoint URL *(Local storage used if omitted)* |
-| `S3_ACCESS_KEY` | **OPTIONAL** | `minioadmin` | S3 Access Key / Backblaze `keyID` |
-| `S3_SECRET_KEY` | **OPTIONAL** | `minioadmin` | S3 Secret Key / Backblaze `applicationKey` |
-| `S3_BUCKET` | **OPTIONAL** | `claim-evidence` | Target storage bucket name |
 
 ---
 

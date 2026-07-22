@@ -1,6 +1,6 @@
 # 🤖 Autonomous Claims Processing System
 
-An enterprise-grade, agentic insurance claims processing platform powered by **LangChain ReAct agents**, **Google Gemini 1.5 Flash Multimodal Vision**, **Qdrant Vector Policy RAG**, **Universal Risk Engine Fraud Scoring**, and the **Model Context Protocol (MCP)**.
+An enterprise-grade, agentic insurance claims processing platform powered by **LangChain ReAct agents**, **Google Gemini 1.5 Flash Multimodal Vision**, **Qdrant Vector Policy RAG**, **Universal Risk Engine Fraud Scoring**, **Backblaze B2 S3 Storage**, and the **Model Context Protocol (MCP)**.
 
 ---
 
@@ -33,7 +33,7 @@ graph TD
     subgraph Persistence & Cache Layer
         Backend <--> Postgres[(🐘 PostgreSQL Database)]
         Backend <--> Redis[(⚡ Redis Session Cache)]
-        Backend <--> B2[(📦 Local Storage / Optional Backblaze B2 S3)]
+        Backend <--> B2[(📦 Backblaze B2 S3 Object Storage)]
     end
 ```
 
@@ -44,6 +44,7 @@ graph TD
 - **🧠 Autonomous Agentic Decisioning:** LangChain ReAct framework conducts multi-step investigations, calling tools dynamically based on claim type and context.
 - **👁️ Multimodal Evidence Inspection:** Gemini 1.5 Flash Vision analyzes submitted damage photos and identity PDFs for authenticity, damage consistency, and fraud flags.
 - **🔍 Policy RAG Search:** Semantic retrieval of policy rules and coverage limits using Qdrant vector database and Gemini embeddings.
+- **📦 Backblaze B2 S3 Storage:** Cloud object storage integration via `boto3` for secure evidence uploads and presigned asset access.
 - **🌐 Real-Time Fact Verification:** Cross-checks claimed incident details against live weather archives (Open-Meteo), geographic coordinates (OpenStreetMap), and natural disaster feeds (GDACS).
 - **📊 Universal Risk Engine:** Rule-based and weighted feature risk scoring engine calculating transparent fraud probability scores and reason codes.
 - **📡 Server-Sent Events (SSE):** Real-time streaming of agent thought processes, step execution, and decision rationale directly to the UI.
@@ -91,7 +92,7 @@ cd Autonomous-claims-application
 
 # 2. Configure environment
 cp backend/.env.example backend/.env
-# (Edit backend/.env and insert your GEMINI_API_KEY)
+# (Edit backend/.env and insert your GEMINI_API_KEY and Backblaze B2 credentials)
 
 # 3. Start single-instance Docker stack
 docker-compose up --build -d
