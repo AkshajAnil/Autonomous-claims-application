@@ -602,7 +602,7 @@ def create_employee(
         "role": req.role
     })
     
-    act_link = f"/setup-password?token={setup_token}"
+    act_link = f"{settings.frontend_url}/?setup_token={setup_token}"
     background_tasks.add_task(send_activation_email, emp.email, emp.full_name, emp.username, act_link)
     
     return {

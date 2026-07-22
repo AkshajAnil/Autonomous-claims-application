@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
     # Gmail / SMTP Email Configuration
+    frontend_url: str = Field(default="http://localhost:5173", alias="FRONTEND_URL")
     smtp_server: str = Field(default="smtp.gmail.com", alias="SMTP_SERVER")
     smtp_port: int = Field(default=587, alias="SMTP_PORT")
     smtp_username: str = Field(default="", alias="SMTP_USERNAME")
