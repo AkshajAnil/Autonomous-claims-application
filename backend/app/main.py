@@ -276,28 +276,30 @@ def change_password(req: PasswordChangeRequest, current_user: User = Depends(get
 
 @app.post("/forgot-password")
 def forgot_password(req: SelfResetPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == req.username.strip().lower()).first()
-    if not user and "@" in req.username:
-        user = db.query(User).filter(User.email == req.username.strip().lower()).first()
+    clean_email = req.email.strip().lower()
+    generic_msg = "If an account exists for this email, a password reset link has been sent."
+    
+    user = db.query(User).filter(User.email == clean_email).first()
+    if not user:
+        user = db.query(User).filter(User.username == clean_email).first()
         
     if not user:
-        raise HTTPException(status_code=400, detail="Account username or email not found.")
+        log_audit(db, None, "Forgot Password Attempt (Unmatched Email)", {"email_attempt": clean_email})
+        return {"message": generic_msg}
         
-    if req.customer_id and req.customer_id.strip() and user.customer_id.strip().upper() != req.customer_id.strip().upper():
-        raise HTTPException(status_code=400, detail="Invalid Customer ID verification.")
-        
+    # Invalidate previous reset token & generate single-use 30-minute token
     reset_token = secrets.token_urlsafe(32)
     user.reset_token = reset_token
-    user.reset_token_expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    user.reset_token_expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
     db.commit()
     
-    recipient_email = user.email or f"{user.username}@company.com"
+    recipient_email = user.email or clean_email
     reset_url = f"{settings.frontend_url}/?setup_token={reset_token}"
     background_tasks.add_task(send_activation_email, recipient_email, user.full_name or user.username, user.username, reset_url)
     
-    log_audit(db, user.id, "Forgot Password Token Link Generated", {"username": user.username, "email": recipient_email})
+    log_audit(db, user.id, "Password Reset Link Dispatched", {"username": user.username, "email": recipient_email})
     return {
-        "message": f"Password reset link has been dispatched to {recipient_email}.",
+        "message": generic_msg,
         "email": recipient_email,
         "reset_url": reset_url,
         "username": user.username,

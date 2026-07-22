@@ -84,8 +84,7 @@ function App() {
 
   // Self-Service Password Reset State (All Roles)
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
-  const [forgotUsername, setForgotUsername] = useState('');
-  const [forgotCustomerId, setForgotCustomerId] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
   const [forgotPwdMsg, setForgotPwdMsg] = useState('');
   const [forgotPwdSuccess, setForgotPwdSuccess] = useState('');
   const [forgotResetInfo, setForgotResetInfo] = useState(null);
@@ -483,18 +482,17 @@ function App() {
       const response = await fetch(`${API_BASE}/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: forgotUsername,
-          customer_id: forgotCustomerId
-        })
+        body: JSON.stringify({ email: forgotEmail })
       });
       if (!response.ok) {
         const resData = await response.json();
         throw new Error(resData.detail || 'Password reset request failed.');
       }
       const data = await response.json();
-      setForgotResetInfo(data);
-      setForgotPwdSuccess(`Password reset link dispatched via email to ${data.email}.`);
+      if (data.reset_url) {
+        setForgotResetInfo(data);
+      }
+      setForgotPwdSuccess(data.message || 'If an account exists for this email, a password reset link has been sent.');
     } catch (e) {
       setForgotPwdMsg(e.message);
     }
@@ -685,21 +683,13 @@ function App() {
             )}
 
             <div className="input-group">
-              <label>Account Username or Email</label>
+              <label>Registered Email Address</label>
               <input 
-                placeholder="Enter your username or registered email" 
-                value={forgotUsername}
-                onChange={(e) => setForgotUsername(e.target.value)}
+                type="email"
+                placeholder="name@company.com" 
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
                 required 
-              />
-            </div>
-
-            <div className="input-group">
-              <label>Customer / Account ID (Optional)</label>
-              <input 
-                placeholder="e.g. CUST-C7F8B2E" 
-                value={forgotCustomerId}
-                onChange={(e) => setForgotCustomerId(e.target.value)}
               />
             </div>
 
