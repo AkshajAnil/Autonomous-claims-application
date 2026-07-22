@@ -9,26 +9,14 @@ This guide provides step-by-step instructions for deploying the **Autonomous Cla
 
 ## 🏛️ Architecture & Component Interaction
 
-```text
-                                       ┌──────────────────────────────────┐
-                                       │        Nginx Load Balancer       │
-                                       │       (Port 80 HTTP / SSE)       │
-                                       └────────────────┬─────────────────┘
-                                                        │
-                      ┌─────────────────────────────────┴─────────────────────────────────┐
-                      │                                                                   │
-                      ▼                                                                   ▼
-       ┌─────────────────────────────┐                                     ┌─────────────────────────────┐
-       │   React Dashboard Frontend  │                                     │ FastAPI Backend (Replicas)  │
-       │    (Static Web Container)   │                                     │     (Port 8000 Uvicorn)     │
-       └─────────────────────────────┘                                     └──────────────┬──────────────┘
-                                                                                          │
-                                             ┌────────────────────────────────────────────┼────────────────────────────────────────────┐
-                                             ▼                                            ▼                                            ▼
-                                ┌───────────────────────────┐                ┌───────────────────────────┐                ┌───────────────────────────┐
-                                │   PostgreSQL Database     │                │    Redis Session Cache    │                │  Backblaze B2 / S3 Storage│
-                                │   (Port 5432 Persistent)  │                │   (Port 6379 Key-Value)   │                │   (Presigned Object URLs) │
-                                └───────────────────────────┘                └───────────────────────────┘                └───────────────────────────┘
+```mermaid
+graph TD
+    Nginx[🌐 Nginx Reverse Proxy / Load Balancer] -->|Port 80| Frontend[💻 React Dashboard Frontend]
+    Nginx -->|Port 8000| Backend[⚙️ FastAPI Backend Service]
+    
+    Backend -->|Database Queries| Postgres[(🐘 PostgreSQL Database)]
+    Backend -->|Session Tokens| Redis[(⚡ Redis Cache)]
+    Backend -->|Evidence Storage| Storage[(📦 Local Storage / Optional Backblaze B2 S3)]
 ```
 
 ---
@@ -62,11 +50,12 @@ REDIS_URL=redis://redis_cache:6379/0
 GEMINI_API_KEY=your_actual_google_gemini_api_key_here
 GEMINI_MODEL=gemini-1.5-flash
 CORS_ORIGINS=*
-JWT_SECRET=production_super_secret_jwt_key_change_me
-JWT_EXPIRATION_MINUTES=120
+JWT_SECRET=supersecretkey
+JWT_EXPIRATION_MINUTES=60
 INVESTIGATION_VERSION=v1.0
 
-# Optional Backblaze B2 / S3 Object Storage (If omitted, uses local disk storage)
+# OPTIONAL: Backblaze B2 / S3 Object Storage
+# If omitted or left blank, backend automatically uses local file storage!
 S3_ENDPOINT=s3.us-west-004.backblazeb2.com
 S3_ACCESS_KEY=your_backblaze_key_id
 S3_SECRET_KEY=your_backblaze_application_key
@@ -83,22 +72,10 @@ docker-compose up --build -d
 ```
 
 #### Step 4: Verify Service Health
-Check that all 7 containers are active and healthy:
+Check that all containers are active and healthy:
 
 ```bash
 docker-compose ps
-```
-
-Expected Output:
-```text
-NAME                IMAGE               COMMAND                  SERVICE               STATUS              PORTS
-claims_backend_1    claims-backend      "uvicorn app.main:a…"   backend1              running             8000/tcp
-claims_backend_2    claims-backend      "uvicorn app.main:a…"   backend2              running             8000/tcp
-claims_backend_3    claims-backend      "uvicorn app.main:a…"   backend3              running             8000/tcp
-claims_frontend     claims-frontend     "/docker-entrypoint.…"   frontend              running             80/tcp
-claims_nginx_lb     nginx:alpine        "/docker-entrypoint.…"   nginx_load_balancer   running             0.0.0.0:80->80/tcp
-claims_postgres     postgres:15-alpine  "docker-entrypoint.s…"   postgres_db           running             0.0.0.0:5432->5432/tcp
-claims_redis        redis:7-alpine      "docker-entrypoint.s…"   redis_cache           running             0.0.0.0:6379->6379/tcp
 ```
 
 #### Step 5: Verify Endpoints
@@ -131,7 +108,7 @@ Deploy the [`backend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-0
   - `REDIS_URL`: *(Your Managed Redis Connection String)*
   - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
   - `PYTHON_VERSION`: `3.11.9`
-  - `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`: *(Your Backblaze B2 credentials)*
+  - `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`: *(Optional Backblaze B2 credentials)*
 
 ### 4. Frontend Microservice Deployment (Vercel / Netlify / AWS S3)
 Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-01/most-credit-scoring-is-built-around/claims-agent/frontend) directory:
@@ -149,10 +126,11 @@ Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-
 | `GEMINI_API_KEY` | **YES** | `""` | Google Gemini API key for multimodal vision & LLM |
 | `REDIS_URL` | OPTIONAL | `redis://localhost:6379/0` | Redis session cache URL (falls back to memory if offline) |
 | `JWT_SECRET` | **YES** | `supersecretkey` | HMAC SHA-256 key for signing auth tokens |
-| `S3_ENDPOINT` | OPTIONAL | `http://localhost:9000` | Backblaze B2 / S3 Endpoint URL |
-| `S3_ACCESS_KEY` | OPTIONAL | `minioadmin` | S3 Access Key / Backblaze `keyID` |
-| `S3_SECRET_KEY` | OPTIONAL | `minioadmin` | S3 Secret Key / Backblaze `applicationKey` |
-| `S3_BUCKET` | OPTIONAL | `claim-evidence` | Target storage bucket name |
+| `JWT_EXPIRATION_MINUTES` | OPTIONAL | `60` | JWT token expiration time in minutes |
+| `S3_ENDPOINT` | **OPTIONAL** | `http://localhost:9000` | Backblaze B2 / S3 Endpoint URL *(Local storage used if omitted)* |
+| `S3_ACCESS_KEY` | **OPTIONAL** | `minioadmin` | S3 Access Key / Backblaze `keyID` |
+| `S3_SECRET_KEY` | **OPTIONAL** | `minioadmin` | S3 Secret Key / Backblaze `applicationKey` |
+| `S3_BUCKET` | **OPTIONAL** | `claim-evidence` | Target storage bucket name |
 
 ---
 
