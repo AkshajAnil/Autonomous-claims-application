@@ -97,7 +97,15 @@ Create a managed PostgreSQL database (e.g., Render Postgres, AWS RDS, Supabase):
 Create a managed Redis instance (e.g., Render Redis, AWS ElastiCache, Upstash):
 - Save the connection URI: `redis://default:password@redis-host:6379/0`
 
-### 3. Backend Microservice Deployment (Render / AWS ECS / GCP Cloud Run)
+### 3. Backblaze B2 S3 Object Storage (Managed Cloud Bucket)
+Create an S3-compatible Bucket on Backblaze B2 (or AWS S3 / Cloudflare R2):
+- Save your credentials:
+  - **S3 Endpoint:** `s3.us-west-004.backblazeb2.com` *(Varies by your bucket region)*
+  - **Access Key (`keyID`):** `your_backblaze_key_id`
+  - **Secret Key (`applicationKey`):** `your_backblaze_application_key`
+  - **Bucket Name:** `your_bucket_name`
+
+### 4. Backend Microservice Deployment (Render / AWS ECS / GCP Cloud Run)
 Deploy the [`backend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-01/most-credit-scoring-is-built-around/claims-agent/backend) directory as a Web Service:
 - **Root Directory:** `backend`
 - **Runtime:** `Python 3` (Version `3.11.9`)
@@ -108,12 +116,12 @@ Deploy the [`backend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-0
   - `REDIS_URL`: *(Your Managed Redis Connection String)*
   - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
   - `PYTHON_VERSION`: `3.11.9`
-  - `S3_ENDPOINT`: *(Your Backblaze B2 S3 Endpoint for your region, e.g. `s3.us-west-004.backblazeb2.com`)*
+  - `S3_ENDPOINT`: `s3.us-west-004.backblazeb2.com` *(Your region S3 Endpoint - REQUIRED)*
   - `S3_ACCESS_KEY`: *(Your Backblaze B2 keyID - REQUIRED)*
   - `S3_SECRET_KEY`: *(Your Backblaze B2 applicationKey - REQUIRED)*
   - `S3_BUCKET`: *(Your Backblaze B2 bucket name - REQUIRED)*
 
-### 4. Frontend Microservice Deployment (Vercel / Netlify / AWS S3)
+### 5. Frontend Microservice Deployment (Vercel / Netlify / AWS S3)
 Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-01/most-credit-scoring-is-built-around/claims-agent/frontend) directory:
 - **Root Directory:** `frontend`
 - **Build Command:** `npm run build`
