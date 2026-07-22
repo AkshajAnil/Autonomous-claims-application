@@ -647,6 +647,9 @@ def verify_setup_token(token: str, db: Session = Depends(get_db)):
 
 @app.post("/setup-password")
 def setup_password(req: TokenResetPasswordRequest, db: Session = Depends(get_db)):
+    if len(req.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long.")
+
     user = db.query(User).filter(User.reset_token == req.token).first()
     if not user or (user.reset_token_expires_at and user.reset_token_expires_at < datetime.datetime.utcnow()):
         raise HTTPException(status_code=400, detail="Invalid or expired password activation token.")
@@ -657,6 +660,8 @@ def setup_password(req: TokenResetPasswordRequest, db: Session = Depends(get_db)
     user.reset_token_expires_at = None
     user.is_active = True
     db.commit()
+    
+    logout_user(user.id)
     log_audit(db, user.id, "Account Password Established", {"username": user.username, "role": user.role})
     return {"message": "Account password set successfully! You may now log in with your credentials."}
 
@@ -671,7 +676,6 @@ def update_user_status(
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only Admins can activate or deactivate accounts.")
         
-    # Constraint 1: Self-deactivation prevention
     if user_id == current_user.id and not is_active:
         raise HTTPException(status_code=400, detail="Self-deactivation is restricted. You cannot deactivate your own admin session.")
         
@@ -679,7 +683,6 @@ def update_user_status(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found.")
         
-    # Constraint 2: Prevent deactivating the last active Admin
     if target_user.role == "admin" and not is_active:
         active_admins = db.query(User).filter(User.role == "admin", User.is_active == True).count()
         if active_admins <= 1:
@@ -738,6 +741,7 @@ def delete_user(
 @app.post("/admin/users/{user_id}/reset-password")
 def admin_reset_password(
     user_id: str, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
@@ -748,19 +752,29 @@ def admin_reset_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
         
-    # Generate temporary password
-    temp_pwd = "TEMP-" + secrets.token_hex(4).upper()
-    user.password_hash = get_password_hash(temp_pwd)
+    reset_token = secrets.token_urlsafe(32)
+    user.reset_token = reset_token
+    user.reset_token_expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     user.must_change_password = True
     db.commit()
     
-    log_audit(db, current_user.id, "Password Reset", {
+    logout_user(user.id)
+    
+    recipient_email = user.email or f"{user.username}@company.com"
+    reset_url = f"{settings.frontend_url}/?setup_token={reset_token}"
+    background_tasks.add_task(send_activation_email, recipient_email, user.full_name or user.username, user.username, reset_url)
+    
+    log_audit(db, current_user.id, "Admin Password Reset Triggered", {
         "target_user_id": user_id,
-        "target_username": user.username
+        "target_username": user.username,
+        "recipient_email": recipient_email
     })
     return {
-        "message": "Password reset successfully. A temporary password has been generated.",
-        "temporary_password": temp_pwd
+        "message": f"Password reset link has been dispatched to {recipient_email}.",
+        "reset_url": reset_url,
+        "email": recipient_email,
+        "username": user.username,
+        "full_name": user.full_name or user.username
     }
 
 

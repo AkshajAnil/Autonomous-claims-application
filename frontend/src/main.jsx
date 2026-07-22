@@ -417,7 +417,8 @@ function App() {
         throw new Error(resData.detail || 'Password reset request failed.');
       }
       const data = await response.json();
-      setResetAlertMsg(`Temporary Password generated: ${data.temporary_password}. Provide this to the user to force change on login.`);
+      setCreatedEmployeeInfo({ ...data, activation_url: data.reset_url });
+      setResetAlertMsg(`Password reset link dispatched via email to ${data.email}.`);
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
@@ -829,7 +830,7 @@ function App() {
               }
             </button>
             
-            {isLoginMode && loginRoleTab === 'customer' && (
+            {isLoginMode && (
               <p style={{marginTop: '0.8rem', textAlign: 'center', fontSize: '12px'}}>
                 <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPasswordMode(true); }} style={{ color: 'var(--mono-text-light)' }}>
                   🔑 Forgot Password? Reset Here
