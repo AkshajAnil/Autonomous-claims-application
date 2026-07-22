@@ -305,7 +305,8 @@ function App() {
         const resData = await response.json();
         throw new Error(resData.detail || 'Failed to create employee profile.');
       }
-      setEmpSuccessMsg(`Successfully provisioned ${empRole} employee profile for ${empName}.`);
+      const data = await response.json();
+      setEmpSuccessMsg(`Successfully provisioned ${empRole} profile for ${empName}! Generated Username: "${data.username}" (First 2 letters of first name + last name). Password setup link & initial credentials sent to ${empEmail}.`);
       setEmpName('');
       setEmpEmail('');
       setEmpTempPwd('');
