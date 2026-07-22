@@ -36,8 +36,8 @@ Deploying the complete microservice cluster onto a single server or Virtual Priv
 
 #### Step 1: Clone the Codebase
 ```bash
-git clone https://github.com/AkshajAnil/Autonomous-claims-application.git
-cd Autonomous-claims-application
+git clone https://github.com/your-username/your-repository-name.git
+cd your-repository-name
 ```
 
 #### Step 2: Configure Production Environment File
@@ -45,12 +45,12 @@ Create the `.env` file in the `backend/` directory:
 
 ```bash
 cat << 'EOF' > backend/.env
-DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
+DATABASE_URL=postgresql://your_db_user:your_db_password@postgres_db:5432/your_db_name
 REDIS_URL=redis://redis_cache:6379/0
-GEMINI_API_KEY=your_actual_google_gemini_api_key_here
+GEMINI_API_KEY=your_google_gemini_api_key_here
 GEMINI_MODEL=gemini-1.5-flash
 CORS_ORIGINS=*
-JWT_SECRET=supersecretkey
+JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRATION_MINUTES=60
 INVESTIGATION_VERSION=v1.0
 

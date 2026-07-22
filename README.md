@@ -87,8 +87,8 @@ To launch the full microservice stack on your local machine:
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/AkshajAnil/Autonomous-claims-application.git
-cd Autonomous-claims-application
+git clone https://github.com/your-username/your-repository-name.git
+cd your-repository-name
 
 # 2. Configure environment
 cp backend/.env.example backend/.env
