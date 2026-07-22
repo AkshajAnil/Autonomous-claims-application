@@ -204,7 +204,8 @@ class EmployeeCreate(BaseModel):
     full_name: str
     email: str
     role: str
-    temporary_password: str
+    username: str | None = None
+    temporary_password: str | None = None
 
 
 class PasswordChangeRequest(BaseModel):

@@ -62,9 +62,21 @@ function App() {
   // Create Employee Form State
   const [empName, setEmpName] = useState('');
   const [empEmail, setEmpEmail] = useState('');
+  const [empUsername, setEmpUsername] = useState('');
   const [empRole, setEmpRole] = useState('adjuster');
-  const [empTempPwd, setEmpTempPwd] = useState('');
   const [empSuccessMsg, setEmpSuccessMsg] = useState('');
+
+  function handleEmpNameChange(val) {
+    setEmpName(val);
+    const parts = val.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      const firstTwo = parts[0].slice(0, 2).toLowerCase();
+      const lastClean = parts.slice(1).join('').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      setEmpUsername(`${firstTwo}${lastClean}`);
+    } else if (parts.length === 1 && parts[0]) {
+      setEmpUsername(parts[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
+    }
+  }
   
   // Password Reset Alert Modal
   const [resetAlertMsg, setResetAlertMsg] = useState('');
@@ -350,7 +362,7 @@ function App() {
           full_name: empName,
           email: empEmail,
           role: empRole,
-          temporary_password: empTempPwd
+          username: empUsername
         }),
         credentials: 'include'
       });
@@ -359,10 +371,12 @@ function App() {
         throw new Error(resData.detail || 'Failed to create employee profile.');
       }
       const data = await response.json();
-      setEmpSuccessMsg(`Successfully provisioned ${empRole} profile for ${empName}! Generated Username: "${data.username}" (First 2 letters of first name + last name). Password setup link & initial credentials sent to ${empEmail}.`);
+      const fullActivationUrl = `${window.location.origin}${window.location.pathname}?setup_token=${data.setup_token}`;
+      setCreatedEmployeeInfo({ ...data, activation_url: fullActivationUrl });
+      setEmpSuccessMsg(`Successfully provisioned ${empRole} profile for ${empName}! Assigned Username: "${data.username}". Password setup link dispatched via Gmail & available below.`);
       setEmpName('');
       setEmpEmail('');
-      setEmpTempPwd('');
+      setEmpUsername('');
       loadAllUsers();
       loadAuditLogs();
     } catch (e) {
@@ -1962,7 +1976,7 @@ function App() {
                 {createdEmployeeInfo && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '6px', marginBottom: '14px', fontSize: '12px', color: '#166534' }}>
                     <strong>🔗 One-Time Password Setup Link:</strong>
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '6px', marginBottom: '8px' }}>
                       <input 
                         readOnly 
                         value={createdEmployeeInfo.activation_url} 
@@ -1978,9 +1992,17 @@ function App() {
                       >
                         Copy Link
                       </button>
+                      <a 
+                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(createdEmployeeInfo.email)}&su=${encodeURIComponent("🔑 Complete Your Claims Guard Corporate Account Setup")}&body=${encodeURIComponent(`Hello ${createdEmployeeInfo.full_name},\n\nYour employee profile has been created by the System Administrator.\n\nUsername: ${createdEmployeeInfo.username}\n\nPlease click the link below to set your permanent corporate password:\n${createdEmployeeInfo.activation_url}\n\nRegards,\nClaims Guard AI System Admin`)}`}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ padding: '4px 10px', fontSize: '11px', background: '#2563eb', color: '#fff', textDecoration: 'none', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
+                      >
+                        <Mail size={12} /> Send via Gmail
+                      </a>
                     </div>
-                    <small style={{ display: 'block', marginTop: '4px', color: '#15803d' }}>
-                      Share this activation link with <strong>{createdEmployeeInfo.full_name}</strong> to let them establish their corporate password.
+                    <small style={{ display: 'block', color: '#15803d' }}>
+                      Assigned Username: <strong>{createdEmployeeInfo.username}</strong> | Recipient: {createdEmployeeInfo.email}
                     </small>
                   </div>
                 )}
@@ -1988,11 +2010,24 @@ function App() {
                 <div className="input-group">
                   <label>Full Name</label>
                   <input 
-                    placeholder="Enter name"
+                    placeholder="e.g. Sarah Adams"
                     value={empName}
-                    onChange={(e) => setEmpName(e.target.value)}
+                    onChange={(e) => handleEmpNameChange(e.target.value)}
                     required
                   />
+                </div>
+
+                <div className="input-group">
+                  <label>Assigned Username (Set by Admin)</label>
+                  <input 
+                    placeholder="e.g. saadams"
+                    value={empUsername}
+                    onChange={(e) => setEmpUsername(e.target.value)}
+                    required
+                  />
+                  <small style={{ fontSize: '10px', color: 'var(--mono-text-light)', marginTop: '2px', display: 'block' }}>
+                    Auto-suggested rule: First 2 letters of first name + last name (editable by Admin)
+                  </small>
                 </div>
 
                 <div className="input-group">
@@ -2015,17 +2050,6 @@ function App() {
                     <option value="adjuster">Claims Adjuster</option>
                     <option value="admin">System Administrator</option>
                   </select>
-                </div>
-
-                <div className="input-group">
-                  <label>Temporary Password</label>
-                  <input 
-                    type="password"
-                    placeholder="••••••••"
-                    value={empTempPwd}
-                    onChange={(e) => setEmpTempPwd(e.target.value)}
-                    required
-                  />
                 </div>
 
                 <button type="submit" style={{ background: 'var(--mono-primary)' }}>

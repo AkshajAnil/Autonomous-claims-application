@@ -545,20 +545,25 @@ def create_employee(
     if req.role not in {"adjuster", "admin"}:
         raise HTTPException(status_code=400, detail="Invalid employee role. Must be 'adjuster' or 'admin'.")
         
-    # Generate username: first 2 letters of first name + last name (lowercase)
-    name_parts = req.full_name.strip().split()
-    if len(name_parts) >= 2:
-        first_two = name_parts[0][:2].lower()
-        last_clean = re.sub(r'[^a-zA-Z0-9]', '', "".join(name_parts[1:])).lower()
-        base_username = f"{first_two}{last_clean}"
+    # Set Username: explicitly specified by Admin or auto-generated (first 2 letters + last name)
+    if req.username and req.username.strip():
+        username = req.username.strip().lower()
+        if db.query(User).filter(User.username == username).first():
+            raise HTTPException(status_code=400, detail=f"Username '{username}' is already taken.")
     else:
-        base_username = re.sub(r'[^a-zA-Z0-9]', '', req.full_name).lower()
-        
-    username = base_username
-    idx = 1
-    while db.query(User).filter(User.username == username).first():
-        username = f"{base_username}{idx}"
-        idx += 1
+        name_parts = req.full_name.strip().split()
+        if len(name_parts) >= 2:
+            first_two = name_parts[0][:2].lower()
+            last_clean = re.sub(r'[^a-zA-Z0-9]', '', "".join(name_parts[1:])).lower()
+            base_username = f"{first_two}{last_clean}"
+        else:
+            base_username = re.sub(r'[^a-zA-Z0-9]', '', req.full_name).lower()
+            
+        username = base_username
+        idx = 1
+        while db.query(User).filter(User.username == username).first():
+            username = f"{base_username}{idx}"
+            idx += 1
         
     if db.query(User).filter(User.email == req.email).first():
         raise HTTPException(status_code=400, detail="An employee with this email already exists.")
