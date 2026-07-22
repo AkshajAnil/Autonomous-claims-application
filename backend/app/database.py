@@ -10,10 +10,16 @@ class Base(DeclarativeBase):
 
 def sqlalchemy_database_url() -> str:
     url = get_settings().database_url
-    if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+psycopg://", 1)
-    if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql+psycopg://", 1)
+    if url.startswith("postgresql://") or url.startswith("postgres://"):
+        try:
+            import psycopg
+            return url.replace("postgresql://", "postgresql+psycopg://", 1).replace("postgres://", "postgresql+psycopg://", 1)
+        except ImportError:
+            try:
+                import psycopg2
+                return url.replace("postgresql://", "postgresql+psycopg2://", 1).replace("postgres://", "postgresql+psycopg2://", 1)
+            except ImportError:
+                return url
     return url
 
 
