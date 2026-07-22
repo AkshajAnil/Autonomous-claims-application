@@ -19,7 +19,8 @@ import {
   MapPin, 
   ArrowRight,
   Clock,
-  Key
+  Key,
+  Mail
 } from 'lucide-react';
 import './styles.css';
 
