@@ -105,10 +105,11 @@ async def save_upload(file: UploadFile, claim_id: str) -> tuple[str, str]:
             print(f"Backblaze B2 S3 upload warning: {exc}")
 
     # Fallback to local storage
-    local_path = os.path.join(LOCAL_UPLOAD_DIR, f"{claim_id}_{filename}")
+    stored_filename = f"{claim_id}_{filename}"
+    local_path = os.path.join(LOCAL_UPLOAD_DIR, stored_filename)
     with open(local_path, "wb") as f:
         f.write(content)
-    return object_name, f"/api/uploads/{filename}"
+    return object_name, f"/api/uploads/{stored_filename}"
 
 
 def assert_storage_ready() -> None:

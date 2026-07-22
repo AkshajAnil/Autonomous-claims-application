@@ -127,6 +127,15 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/uploads/{filename}")
+@app.get("/api/uploads/{filename}")
+def serve_upload(filename: str):
+    safe_path = os.path.join(LOCAL_UPLOAD_DIR, filename)
+    if os.path.exists(safe_path):
+        return FileResponse(safe_path)
+    raise HTTPException(status_code=404, detail="File not found")
+
+
 def verify_identity_card(full_name: str, card_bytes: bytes, mime_type: str) -> bool:
     if not full_name:
         return False
