@@ -724,11 +724,19 @@ def delete_user(
     deleted_username = target_user.username
     deleted_role = target_user.role
     
-    if target_user.role == "adjuster":
+    try:
+        # Foreign Key Cleanup
+        db.query(AuditLog).filter(AuditLog.user_id == user_id).update({"user_id": None})
         db.query(Claim).filter(Claim.assigned_adjuster_id == user_id).update({"assigned_adjuster_id": None})
+        db.query(Claim).filter(Claim.reviewed_by_id == user_id).update({"reviewed_by_id": None})
+        db.query(Claim).filter(Claim.user_id == user_id).update({"user_id": None})
+        db.commit()
         
-    db.delete(target_user)
-    db.commit()
+        db.delete(target_user)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Could not delete user '{deleted_username}': {str(e)}")
     
     log_audit(db, current_user.id, "User Deleted", {
         "target_user_id": user_id,
