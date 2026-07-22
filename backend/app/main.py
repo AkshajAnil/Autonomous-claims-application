@@ -63,7 +63,7 @@ def validate_uploaded_file(file: UploadFile):
 
 
 def seed_users(db: Session):
-    # Hardcoded first admin as 'admin' / '1234'
+    # Only seed initial system administrator
     if not db.query(User).filter(User.username == "admin").first():
         adm = User(
             username="admin",
@@ -77,36 +77,6 @@ def seed_users(db: Session):
             is_active=True
         )
         db.add(adm)
-        
-    # Seed default Customer test account
-    if not db.query(User).filter(User.username == "customer_user").first():
-        cust = User(
-            username="customer_user",
-            password_hash=get_password_hash("1234"),
-            customer_id="CUST-C7F8B2E",
-            role="customer",
-            full_name="Akshaj Anil",
-            is_identity_verified=True,
-            email="customer@company.com",
-            must_change_password=False,
-            is_active=True
-        )
-        db.add(cust)
-        
-    # Seed default Adjuster test account
-    if not db.query(User).filter(User.username == "adjuster_user").first():
-        adj = User(
-            username="adjuster_user",
-            password_hash=get_password_hash("1234"),
-            customer_id="ADJ-A12B98C",
-            role="adjuster",
-            full_name="Sarah Adams",
-            is_identity_verified=True,
-            email="adjuster@company.com",
-            must_change_password=False,
-            is_active=True
-        )
-        db.add(adj)
         
     db.commit()
 

@@ -146,12 +146,10 @@ Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-
 
 ## 🔑 Default Initial Credentials
 
-When the backend starts for the first time, it automatically seeds three default accounts:
+When the backend starts for the first time, it automatically seeds the initial System Admin account:
 
 | Role | Username | Default Password | Customer / Employee ID |
 | :--- | :--- | :--- | :--- |
 | **System Admin** | `admin` | `1234` | `ADM-SYSTEM` |
-| **Claims Adjuster** | `adjuster_user` | `1234` | `ADJ-A12B98C` |
-| **Customer** | `customer_user` | `1234` | `CUST-C7F8B2E` |
 
 > ⚠️ **Security Notice:** Change these default passwords immediately after initial setup!
