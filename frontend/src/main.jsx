@@ -132,6 +132,9 @@ function App() {
       }
       const data = await res.json();
       setTokenUserInfo(data);
+      if (data.role) {
+        setLoginRoleTab(data.role);
+      }
     } catch (e) {
       setTokenError(e.message);
     }
@@ -153,6 +156,9 @@ function App() {
       }
       setTokenSuccess('Password set successfully! Redirecting to login...');
       setTimeout(() => {
+        if (tokenUserInfo && tokenUserInfo.role) {
+          setLoginRoleTab(tokenUserInfo.role);
+        }
         window.history.replaceState({}, document.title, window.location.pathname);
         setTokenFromUrl('');
         setTokenUserInfo(null);
