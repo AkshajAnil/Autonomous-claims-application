@@ -529,9 +529,13 @@ def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(ge
     return db.query(User).order_by(User.created_at.desc()).all()
 
 
-@app.post("/admin/employees", response_model=UserOut)
+from app.email_service import send_activation_email
+
+
+@app.post("/admin/employees")
 def create_employee(
     req: EmployeeCreate, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
@@ -592,6 +596,10 @@ def create_employee(
         "email": req.email,
         "role": req.role
     })
+    
+    act_link = f"/setup-password?token={setup_token}"
+    background_tasks.add_task(send_activation_email, emp.email, emp.full_name, emp.username, act_link)
+    
     return {
         "id": emp.id,
         "username": emp.username,
@@ -600,7 +608,7 @@ def create_employee(
         "full_name": emp.full_name,
         "email": emp.email,
         "setup_token": setup_token,
-        "activation_link": f"/setup-password?token={setup_token}"
+        "activation_link": act_link
     }
 
 

@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     jwt_expiration_minutes: int = Field(default=60, alias="JWT_EXPIRATION_MINUTES")
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
 
+    # Gmail / SMTP Email Configuration
+    smtp_server: str = Field(default="smtp.gmail.com", alias="SMTP_SERVER")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_username: str = Field(default="", alias="SMTP_USERNAME")
+    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")
+    smtp_from_email: str = Field(default="", alias="SMTP_FROM_EMAIL")
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     @property
