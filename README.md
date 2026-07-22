@@ -39,12 +39,12 @@ graph TD
 
 ---
 
-## 📂 Microservice Directory Structure
+## 📂 Production Microservice Directory Structure
 
 ```text
 claims-agent/
 ├── backend/                   # ⚙️ FastAPI API & Agent Infrastructure
-│   ├── app/                   # Core application modules
+│   ├── app/                   # Core application modules & MCP tools
 │   ├── Dockerfile             # Standalone Backend container definition
 │   └── requirements.txt       # Pinned Python dependencies
 │
@@ -54,6 +54,9 @@ claims-agent/
 │
 ├── nginx/                     # 🌐 Nginx Reverse Proxy Service
 │   └── nginx.conf             # Route load balancing & SSE streaming proxy config
+│
+├── postgres/                  # 🐘 PostgreSQL Database Service
+│   └── init.sql               # Database extensions & setup script
 │
 ├── redis/                     # ⚡ Redis Session Cache Service
 │   └── redis.conf             # Production Redis cache configuration
