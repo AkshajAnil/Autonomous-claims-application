@@ -28,7 +28,7 @@ os.makedirs(LOCAL_UPLOAD_DIR, exist_ok=True)
 def get_b2_s3_client():
     settings = get_settings()
     endpoint = settings.s3_endpoint
-    if not endpoint or endpoint in ["http://localhost:9000", "minioadmin"]:
+    if not endpoint or not settings.s3_access_key or not settings.s3_secret_key:
         return None, None
 
     # Clean endpoint string

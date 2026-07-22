@@ -7,10 +7,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str = Field(alias="DATABASE_URL")
 
-    s3_endpoint: str = Field(default="http://localhost:9000", alias="S3_ENDPOINT")
-    s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
-    s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
-    s3_bucket: str = Field(default="claim-evidence", alias="S3_BUCKET")
+    s3_endpoint: str = Field(default="", alias="S3_ENDPOINT")
+    s3_access_key: str = Field(default="", alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(default="", alias="S3_SECRET_KEY")
+    s3_bucket: str = Field(default="", alias="S3_BUCKET")
     s3_secure: bool = Field(default=False, alias="S3_SECURE")
 
     qdrant_url: str = Field(default="http://localhost:6333", alias="QDRANT_URL")
