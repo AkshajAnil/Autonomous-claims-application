@@ -8,14 +8,14 @@ An enterprise-grade, agentic insurance claims processing platform powered by **L
 
 ```mermaid
 graph TD
-    User([👤 User / Adjuster]) <-->|HTTP / SSE| Nginx[🌐 Nginx Reverse Proxy & Load Balancer]
+    User([👤 User / Adjuster]) <-->|HTTP / SSE| Nginx[🌐 Nginx Reverse Proxy]
     
     subgraph Client Layer
         Nginx <--> Frontend[💻 React + Vite Dashboard]
     end
 
     subgraph API & Agentic Core Layer
-        Nginx <-->|Least-Conn Load Balance| Backend[⚙️ FastAPI Backend Replicas]
+        Nginx <--> Backend[⚙️ FastAPI Backend Service]
         Backend <--> LangChain[🧠 LangChain ReAct Agent]
         LangChain <--> MCPClient[🔌 MCP Client]
         MCPClient <--> MCPServer[🛠️ MCP Tool Server]
@@ -39,43 +39,28 @@ graph TD
 
 ---
 
-## ✨ Key Features
-
-- **🧠 Autonomous Agentic Decisioning:** LangChain ReAct framework conducts multi-step investigations, calling tools dynamically based on claim type and context.
-- **👁️ Multimodal Evidence Inspection:** Gemini 1.5 Flash Vision analyzes submitted damage photos and identity PDFs for authenticity, damage consistency, and fraud flags.
-- **🔍 Policy RAG Search:** Semantic retrieval of policy rules and coverage limits using Qdrant vector database and Gemini embeddings.
-- **🌐 Real-Time Fact Verification:** Cross-checks claimed incident details against live weather archives (Open-Meteo), geographic coordinates (OpenStreetMap), and natural disaster feeds (GDACS).
-- **📊 ML-Powered Fraud Scoring:** Trained XGBoost classifier computes real-time risk scores with feature attribution (SHAP values).
-- **📡 Server-Sent Events (SSE):** Real-time streaming of agent thought processes, step execution, and decision rationale directly to the UI.
-- **🛡️ Role-Based Management:** Tailored portals for **Customers** (submit & track claims), **Adjusters** (adjudicate & manual override), and **Admins** (user management & audit logs).
-
----
-
-## 📂 Repository Structure
+## 📂 Microservice Directory Structure
 
 ```text
 claims-agent/
-├── DEPLOYMENT.md              # 📖 Comprehensive Production Deployment Guide
-├── docker-compose.yml         # 🐳 Full-stack single-instance Docker orchestration
-├── nginx.conf                 # 🌐 Load balancer & SSE streaming proxy configuration
-├── .python-version            # 📌 Runtime version pin (Python 3.11.9)
-│
 ├── backend/                   # ⚙️ FastAPI API & Agent Infrastructure
 │   ├── app/                   # Core application modules
-│   │   ├── agent.py           # LangChain ReAct agent & fallback pipeline
-│   │   ├── mcp_server.py      # MCP Tool Server (RAG, Vision, Fact-check)
-│   │   ├── mcp_client.py      # MCP Client subprocess bridge
-│   │   ├── ml_service.py      # XGBoost ML fraud prediction model
-│   │   ├── rag.py             # Qdrant policy vector search engine
-│   │   ├── storage.py         # Backblaze B2 / S3 file upload handler
-│   │   ├── auth.py            # JWT Authentication & Redis session manager
-│   │   └── main.py            # FastAPI REST endpoints & SSE streaming
-│   ├── Dockerfile             # Production Backend container definition
+│   ├── Dockerfile             # Standalone Backend container definition
 │   └── requirements.txt       # Pinned Python dependencies
 │
-└── frontend/                  # 💻 React Dashboard User Interface
-    ├── src/                   # React components & state management
-    └── Dockerfile             # Multi-stage Nginx Frontend container definition
+├── frontend/                  # 💻 React Dashboard User Interface
+│   ├── src/                   # React components & state management
+│   └── Dockerfile             # Multi-stage Nginx Frontend container definition
+│
+├── nginx/                     # 🌐 Nginx Reverse Proxy Service
+│   └── nginx.conf             # Route load balancing & SSE streaming proxy config
+│
+├── redis/                     # ⚡ Redis Session Cache Service
+│   └── redis.conf             # Production Redis cache configuration
+│
+├── .python-version            # 📌 Runtime version pin (Python 3.11.9)
+├── docker-compose.yml         # 🐳 Full-stack microservice orchestration
+└── DEPLOYMENT.md              # 📖 Production Deployment Documentation
 ```
 
 ---
