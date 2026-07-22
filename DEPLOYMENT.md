@@ -55,6 +55,7 @@ JWT_EXPIRATION_MINUTES=60
 INVESTIGATION_VERSION=v1.0
 
 # Backblaze B2 S3 Object Storage (REQUIRED for Evidence Storage)
+# Note: S3_ENDPOINT depends on your bucket region (e.g. s3.us-west-004.backblazeb2.com, s3.us-east-005.backblazeb2.com)
 S3_ENDPOINT=s3.us-west-004.backblazeb2.com
 S3_ACCESS_KEY=your_backblaze_key_id
 S3_SECRET_KEY=your_backblaze_application_key
@@ -107,7 +108,7 @@ Deploy the [`backend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-0
   - `REDIS_URL`: *(Your Managed Redis Connection String)*
   - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
   - `PYTHON_VERSION`: `3.11.9`
-  - `S3_ENDPOINT`: `s3.us-west-004.backblazeb2.com` *(REQUIRED)*
+  - `S3_ENDPOINT`: *(Your Backblaze B2 S3 Endpoint for your region, e.g. `s3.us-west-004.backblazeb2.com`)*
   - `S3_ACCESS_KEY`: *(Your Backblaze B2 keyID - REQUIRED)*
   - `S3_SECRET_KEY`: *(Your Backblaze B2 applicationKey - REQUIRED)*
   - `S3_BUCKET`: *(Your Backblaze B2 bucket name - REQUIRED)*
@@ -126,10 +127,10 @@ Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-
 | :--- | :---: | :--- | :--- |
 | `DATABASE_URL` | **YES** | `postgresql://...` | PostgreSQL connection string |
 | `GEMINI_API_KEY` | **YES** | `""` | Google Gemini API key for multimodal vision & LLM |
-| `S3_ENDPOINT` | **YES** | `s3.us-west-004.backblazeb2.com` | Backblaze B2 S3 Endpoint URL |
-| `S3_ACCESS_KEY` | **YES** | `""` | Backblaze B2 `keyID` |
-| `S3_SECRET_KEY` | **YES** | `""` | Backblaze B2 `applicationKey` |
-| `S3_BUCKET` | **YES** | `claim-evidence` | Backblaze B2 target bucket name |
+| `S3_ENDPOINT` | **YES** | `s3.us-west-004.backblazeb2.com` | Backblaze B2 / AWS S3 Endpoint URL (varies by bucket region) |
+| `S3_ACCESS_KEY` | **YES** | `""` | Backblaze B2 `keyID` / S3 Access Key |
+| `S3_SECRET_KEY` | **YES** | `""` | Backblaze B2 `applicationKey` / S3 Secret Key |
+| `S3_BUCKET` | **YES** | `claim-evidence` | Target storage bucket name |
 | `REDIS_URL` | OPTIONAL | `redis://localhost:6379/0` | Redis session cache URL (falls back to memory if offline) |
 | `JWT_SECRET` | **YES** | `supersecretkey` | HMAC SHA-256 key for signing auth tokens |
 | `JWT_EXPIRATION_MINUTES` | OPTIONAL | `60` | JWT token expiration time in minutes |
