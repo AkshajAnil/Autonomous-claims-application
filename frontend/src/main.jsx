@@ -385,16 +385,17 @@ function App() {
     }
   }
 
-  async function handleToggleStatus(userId, currentStatus) {
+  async function handleDeleteUser(userId, username) {
+    if (!confirm(`Are you sure you want to permanently delete account "${username}"?`)) return;
     setError('');
     try {
-      const response = await fetch(`${API_BASE}/admin/users/${userId}/status?is_active=${!currentStatus}`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE}/admin/users/${userId}`, {
+        method: 'DELETE',
         credentials: 'include'
       });
       if (!response.ok) {
         const resData = await response.json();
-        throw new Error(resData.detail || 'Failed to update account status.');
+        throw new Error(resData.detail || 'Failed to delete user account.');
       }
       loadAllUsers();
       loadAuditLogs();
@@ -1812,13 +1813,12 @@ function App() {
                       <th style={{ padding: '8px', textAlign: 'left' }}>Full Name</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Email</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Status</th>
                       <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allUsers.filter(u => u.role === 'admin').map((u) => (
-                      <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)', opacity: u.is_active ? 1 : 0.6 }}>
+                      <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px' }}>{u.username}</td>
                         <td style={{ padding: '8px' }}>{u.full_name}</td>
@@ -1833,16 +1833,11 @@ function App() {
                             <option value="adjuster">ADJUSTER</option>
                           </select>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', background: u.is_active ? 'var(--mono-success)' : 'var(--mono-danger)', color: '#fff' }}>
-                            {u.is_active ? 'ACTIVE' : 'INACTIVE'}
-                          </span>
-                        </td>
                         <td style={{ padding: '8px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                          <button onClick={() => handleToggleStatus(u.id, u.is_active)} style={{ padding: '2px 6px', fontSize: '11px', background: u.is_active ? 'var(--mono-danger)' : 'var(--mono-success)', color: '#fff', border: 'none' }}>
-                            {u.is_active ? 'Deactivate' : 'Activate'}
+                          <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            Delete
                           </button>
-                          <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none' }}>
+                          <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
                             Reset Pwd
                           </button>
                         </td>
@@ -1861,13 +1856,12 @@ function App() {
                       <th style={{ padding: '8px', textAlign: 'left' }}>Full Name</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Email</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Status</th>
                       <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allUsers.filter(u => u.role === 'adjuster').map((u) => (
-                      <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)', opacity: u.is_active ? 1 : 0.6 }}>
+                      <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px' }}>{u.username}</td>
                         <td style={{ padding: '8px' }}>{u.full_name}</td>
@@ -1882,16 +1876,11 @@ function App() {
                             <option value="admin">ADMIN</option>
                           </select>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', background: u.is_active ? 'var(--mono-success)' : 'var(--mono-danger)', color: '#fff' }}>
-                            {u.is_active ? 'ACTIVE' : 'INACTIVE'}
-                          </span>
-                        </td>
                         <td style={{ padding: '8px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                          <button onClick={() => handleToggleStatus(u.id, u.is_active)} style={{ padding: '2px 6px', fontSize: '11px', background: u.is_active ? 'var(--mono-danger)' : 'var(--mono-success)', color: '#fff', border: 'none' }}>
-                            {u.is_active ? 'Deactivate' : 'Activate'}
+                          <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            Delete
                           </button>
-                          <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none' }}>
+                          <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
                             Reset Pwd
                           </button>
                         </td>
@@ -1910,13 +1899,12 @@ function App() {
                       <th style={{ padding: '8px', textAlign: 'left' }}>Full Name</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Email</th>
                       <th style={{ padding: '8px', textAlign: 'left' }}>Role</th>
-                      <th style={{ padding: '8px', textAlign: 'center' }}>Status</th>
                       <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allUsers.filter(u => u.role === 'customer').map((u) => (
-                      <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)', opacity: u.is_active ? 1 : 0.6 }}>
+                      <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px' }}>{u.username}</td>
                         <td style={{ padding: '8px' }}>{u.full_name}</td>
@@ -1926,29 +1914,19 @@ function App() {
                             CUSTOMER
                           </span>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <span style={{ 
-                            fontSize: '11px', 
-                            fontWeight: 'bold', 
-                            padding: '2px 6px',
-                            background: u.is_active ? 'var(--mono-success)' : 'var(--mono-danger)',
-                            color: '#fff'
-                          }}>
-                            {u.is_active ? 'ACTIVE' : 'INACTIVE'}
-                          </span>
-                        </td>
                         <td style={{ padding: '8px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                           <button 
-                            onClick={() => handleToggleStatus(u.id, u.is_active)}
+                            onClick={() => handleDeleteUser(u.id, u.username)}
                             style={{ 
                               padding: '2px 6px', 
                               fontSize: '11px', 
-                              background: u.is_active ? 'var(--mono-danger)' : 'var(--mono-success)',
+                              background: 'var(--mono-danger)',
                               color: '#fff',
-                              border: 'none'
+                              border: 'none',
+                              cursor: 'pointer'
                             }}
                           >
-                            {u.is_active ? 'Deactivate' : 'Activate'}
+                            Delete
                           </button>
                           <button 
                             onClick={() => handleResetPassword(u.id)}
@@ -1957,7 +1935,8 @@ function App() {
                               fontSize: '11px', 
                               background: 'var(--mono-secondary)',
                               color: '#fff',
-                              border: 'none'
+                              border: 'none',
+                              cursor: 'pointer'
                             }}
                           >
                             Reset Pwd

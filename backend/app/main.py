@@ -682,6 +682,44 @@ def update_user_status(
     return target_user
 
 
+@app.delete("/admin/users/{user_id}")
+def delete_user(
+    user_id: str, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only Admins can delete user accounts.")
+        
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Self-deletion is restricted. You cannot delete your own admin session.")
+        
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    if target_user.role == "admin":
+        active_admins = db.query(User).filter(User.role == "admin").count()
+        if active_admins <= 1:
+            raise HTTPException(status_code=400, detail="Deletion denied. There must be at least one administrator account in the system.")
+            
+    deleted_username = target_user.username
+    deleted_role = target_user.role
+    
+    if target_user.role == "adjuster":
+        db.query(Claim).filter(Claim.assigned_adjuster_id == user_id).update({"assigned_adjuster_id": None})
+        
+    db.delete(target_user)
+    db.commit()
+    
+    log_audit(db, current_user.id, "User Deleted", {
+        "target_user_id": user_id,
+        "target_username": deleted_username,
+        "role": deleted_role
+    })
+    return {"message": f"User '{deleted_username}' deleted successfully."}
+
+
 @app.post("/admin/users/{user_id}/reset-password")
 def admin_reset_password(
     user_id: str, 
