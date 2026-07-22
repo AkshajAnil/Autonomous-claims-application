@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   nginx_load_balancer:
-    image: nginx:latest
+    image: nginx:alpine
     container_name: claims_nginx_lb
     ports:
       - "80:80"
@@ -19,24 +19,30 @@ services:
     container_name: claims_backend_1
     environment:
       - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
+      - REDIS_URL=redis://redis_cache:6379/0
     depends_on:
       - postgres_db
+      - redis_cache
 
   backend2:
     build: ./backend
     container_name: claims_backend_2
     environment:
       - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
+      - REDIS_URL=redis://redis_cache:6379/0
     depends_on:
       - postgres_db
+      - redis_cache
 
   backend3:
     build: ./backend
     container_name: claims_backend_3
     environment:
       - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
+      - REDIS_URL=redis://redis_cache:6379/0
     depends_on:
       - postgres_db
+      - redis_cache
 
   frontend:
     build: ./frontend
@@ -51,3 +57,9 @@ services:
       POSTGRES_DB: claims_db
     ports:
       - "5432:5432"
+
+  redis_cache:
+    image: redis:7-alpine
+    container_name: claims_redis
+    ports:
+      - "6379:6379"
