@@ -81,23 +81,31 @@ claims-agent/
 
 ---
 
-## 🚀 Quick Start (Local Docker Compose)
+## 💻 Local Development Setup
 
-To launch the full microservice stack on your local machine:
-
+### 1. Run Backend Locally
 ```bash
-# 1. Clone repository
-git clone https://github.com/your-username/your-repository-name.git
-cd your-repository-name
+cd backend
+cp .env.example .env
+# (Configure .env credentials)
 
-# 2. Configure environment
-cp backend/.env.example backend/.env
-# (Edit backend/.env and insert your GEMINI_API_KEY and Backblaze B2 credentials)
-
-# 3. Start single-instance Docker stack
-docker-compose up --build -d
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Access the dashboard at **http://localhost**!
+### 2. Run Frontend Locally
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 🐳 Docker Stack (Optional Local Orchestration)
+
+```bash
+docker-compose up --build -d
+```
 
 For detailed cloud deployment instructions (Render, AWS, DigitalOcean, VPS), refer to **[DEPLOYMENT.md](DEPLOYMENT.md)**.

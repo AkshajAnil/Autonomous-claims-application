@@ -2,7 +2,7 @@
 
 This guide provides step-by-step instructions for deploying the **Autonomous Claims Processing System** under two production architecture patterns:
 
-1. **[Pattern A: Single-Instance Docker Compose Deployment](#pattern-a-single-instance-docker-compose-deployment)** *(Ideal for single VPS hosts like DigitalOcean, AWS EC2, Linode, or Staging)*
+1. **[Pattern A: Local & Single-Instance Server Deployment](#pattern-a-local--single-instance-server-deployment)** *(Local development or VPS deployment)*
 2. **[Pattern B: Distributed Cloud Microservices Deployment](#pattern-b-distributed-cloud-microservices-deployment)** *(Ideal for Enterprise Cloud Platforms like Render, AWS ECS/RDS, GCP Cloud Run)*
 
 ---
@@ -21,27 +21,40 @@ graph TD
 
 ---
 
-## Pattern A: Single-Instance Docker Compose Deployment
+## Pattern A: Local & Single-Instance Server Deployment
 
-Deploying the complete microservice cluster onto a single server or Virtual Private Server (VPS).
+### 💻 Option 1: Direct Local Execution (Without Docker)
 
-### System Prerequisites
-- **OS:** Ubuntu 22.04 LTS / Debian 12 / RHEL 9 / Windows Server
-- **Hardware:** Minimum 2 vCPUs, 4GB RAM, 20GB SSD Storage
-- **Installed Software:** Docker Engine v24.0+ and Docker Compose v2.20+
+#### Step 1: Run Backend Service
+```bash
+cd backend
+cp .env.example .env
+# Edit .env and configure credentials
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Step 2: Run Frontend Service
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
 ---
 
-### Step-by-Step Deployment Commands
+### 🐳 Option 2: Docker Compose Orchestration
 
-#### Step 1: Clone the Codebase
+#### Step 1: Clone & Configure
 ```bash
 git clone https://github.com/your-username/your-repository-name.git
 cd your-repository-name
+cp backend/.env.example backend/.env
 ```
 
 #### Step 2: Configure Production Environment File
-Create the `.env` file in the `backend/` directory:
+Create `.env` in `backend/`:
 
 ```bash
 cat << 'EOF' > backend/.env
@@ -55,7 +68,6 @@ JWT_EXPIRATION_MINUTES=60
 INVESTIGATION_VERSION=v1.0
 
 # Backblaze B2 S3 Object Storage (REQUIRED for Evidence Storage)
-# Note: S3_ENDPOINT depends on your bucket region (e.g., s3.us-west-004.backblazeb2.com)
 S3_ENDPOINT=your_s3_endpoint_here
 S3_ACCESS_KEY=your_s3_access_key_here
 S3_SECRET_KEY=your_s3_secret_key_here
@@ -64,23 +76,10 @@ S3_SECURE=true
 EOF
 ```
 
-#### Step 3: Build & Launch Container Stack
-Run Docker Compose in detached mode:
-
+#### Step 3: Launch Stack
 ```bash
 docker-compose up --build -d
 ```
-
-#### Step 4: Verify Service Health
-Check that all containers are active and healthy:
-
-```bash
-docker-compose ps
-```
-
-#### Step 5: Verify Endpoints
-- **Web UI Dashboard:** Open `http://your-server-ip`
-- **Backend Health Check:** Run `curl http://your-server-ip/api/health` $\rightarrow$ `{"status":"ok"}`
 
 ---
 
@@ -100,10 +99,10 @@ Create a managed Redis instance (e.g., Render Redis, AWS ElastiCache, Upstash):
 ### 3. Backblaze B2 S3 Object Storage (Managed Cloud Bucket)
 Create an S3-compatible Bucket on Backblaze B2 (or AWS S3 / Cloudflare R2):
 - Save your credentials:
-  - **S3 Endpoint:** `s3.us-west-004.backblazeb2.com` *(Varies by your bucket region)*
-  - **Access Key (`keyID`):** `your_backblaze_key_id`
-  - **Secret Key (`applicationKey`):** `your_backblaze_application_key`
-  - **Bucket Name:** `your_bucket_name`
+  - **S3 Endpoint:** `your_s3_endpoint_here`
+  - **Access Key (`keyID`):** `your_s3_access_key_here`
+  - **Secret Key (`applicationKey`):** `your_s3_secret_key_here`
+  - **Bucket Name:** `your_s3_bucket_name_here`
 
 ### 4. Backend Microservice Deployment (Render / AWS ECS / GCP Cloud Run)
 Deploy the [`backend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-01/most-credit-scoring-is-built-around/claims-agent/backend) directory as a Web Service:
@@ -116,10 +115,10 @@ Deploy the [`backend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-0
   - `REDIS_URL`: *(Your Managed Redis Connection String)*
   - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
   - `PYTHON_VERSION`: `3.11.9`
-  - `S3_ENDPOINT`: `s3.us-west-004.backblazeb2.com` *(Your region S3 Endpoint - REQUIRED)*
-  - `S3_ACCESS_KEY`: *(Your Backblaze B2 keyID - REQUIRED)*
-  - `S3_SECRET_KEY`: *(Your Backblaze B2 applicationKey - REQUIRED)*
-  - `S3_BUCKET`: *(Your Backblaze B2 bucket name - REQUIRED)*
+  - `S3_ENDPOINT`: *(Your S3 Endpoint - REQUIRED)*
+  - `S3_ACCESS_KEY`: *(Your S3 Access Key - REQUIRED)*
+  - `S3_SECRET_KEY`: *(Your S3 Secret Key - REQUIRED)*
+  - `S3_BUCKET`: *(Your S3 Bucket Name - REQUIRED)*
 
 ### 5. Frontend Microservice Deployment (Vercel / Netlify / AWS S3)
 Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-01/most-credit-scoring-is-built-around/claims-agent/frontend) directory:
