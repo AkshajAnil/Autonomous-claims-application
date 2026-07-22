@@ -209,3 +209,9 @@ class EmployeeCreate(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     new_password: str
+
+
+class SelfResetPasswordRequest(BaseModel):
+    username: str
+    customer_id: str
+    new_password: str

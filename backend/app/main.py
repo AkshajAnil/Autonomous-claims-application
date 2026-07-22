@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.database import SessionLocal, get_db, init_db
 from app.models import Claim, Evidence, User, AuditLog, ClaimStatus
 from app.repository import claim_with_children, log_audit
-from app.schemas import ClaimOut, UserCreate, UserOut, AuditLogOut, AdjudicationRequest, EmployeeCreate, PasswordChangeRequest
+from app.schemas import ClaimOut, UserCreate, UserOut, AuditLogOut, AdjudicationRequest, EmployeeCreate, PasswordChangeRequest, SelfResetPasswordRequest
 from app.storage import assert_storage_ready, save_upload
 from app.auth import get_password_hash, verify_password, create_access_token, logout_user, get_current_user
 
@@ -272,6 +272,22 @@ def change_password(req: PasswordChangeRequest, current_user: User = Depends(get
     db.commit()
     log_audit(db, current_user.id, "Password Changed", {"username": current_user.username})
     return {"message": "Password updated successfully"}
+
+
+@app.post("/forgot-password")
+def forgot_password(req: SelfResetPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == req.username).first()
+    if not user or user.customer_id.strip().upper() != req.customer_id.strip().upper():
+        raise HTTPException(status_code=400, detail="Invalid Username or Customer/Employee ID combination.")
+        
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is deactivated. Contact system administrator.")
+        
+    user.password_hash = get_password_hash(req.new_password)
+    user.must_change_password = False
+    db.commit()
+    log_audit(db, user.id, "Self-Service Password Reset", {"username": user.username, "role": user.role})
+    return {"message": "Password reset successfully! You may now log in with your new password."}
 
 
 @app.post("/logout")

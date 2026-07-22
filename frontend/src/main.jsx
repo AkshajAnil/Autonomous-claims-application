@@ -69,6 +69,15 @@ function App() {
   // Password Reset Alert Modal
   const [resetAlertMsg, setResetAlertMsg] = useState('');
 
+  // Self-Service Password Reset State (All Roles)
+  const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
+  const [forgotUsername, setForgotUsername] = useState('');
+  const [forgotCustomerId, setForgotCustomerId] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotPwdMsg, setForgotPwdMsg] = useState('');
+  const [forgotPwdSuccess, setForgotPwdSuccess] = useState('');
+  const [showSelfChangePwdModal, setShowSelfChangePwdModal] = useState(false);
+
   const selected = useMemo(
     () => claims.find((claim) => claim.id === selectedId),
     [claims, selectedId],
@@ -388,6 +397,37 @@ function App() {
     }
   }
 
+  async function handleSelfForgotPassword(event) {
+    event.preventDefault();
+    setForgotPwdMsg('');
+    setForgotPwdSuccess('');
+    try {
+      const response = await fetch(`${API_BASE}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: forgotUsername,
+          customer_id: forgotCustomerId,
+          new_password: forgotNewPassword
+        })
+      });
+      if (!response.ok) {
+        const resData = await response.json();
+        throw new Error(resData.detail || 'Password reset failed.');
+      }
+      setForgotPwdSuccess('Password reset successfully! You can now log in.');
+      setTimeout(() => {
+        setIsForgotPasswordMode(false);
+        setForgotUsername('');
+        setForgotCustomerId('');
+        setForgotNewPassword('');
+        setForgotPwdSuccess('');
+      }, 1800);
+    } catch (e) {
+      setForgotPwdMsg(e.message);
+    }
+  }
+
   async function handleAuth(event) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -476,6 +516,63 @@ function App() {
             </div>
             <button type="submit">Update Password</button>
             <button type="button" onClick={logout} style={{ marginTop: '8px', background: 'var(--mono-surface-dark)' }}>Cancel & Log Out</button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  if (isForgotPasswordMode) {
+    return (
+      <main className="shell auth-shell">
+        <div style={{ maxWidth: '460px', margin: '3rem auto', width: '100%' }}>
+          <div className="brand-header">
+            <Key size={40} className="brand-icon" />
+            <h1>Self-Service Password Reset</h1>
+            <p className="brand-sub">Verify Account Identity & Establish New Password</p>
+          </div>
+          <form className="panel claim-form" onSubmit={handleSelfForgotPassword}>
+            <h2>Reset Account Password</h2>
+            {forgotPwdMsg && <div className="error-banner">{forgotPwdMsg}</div>}
+            {forgotPwdSuccess && <div className="status-pill" style={{ display: 'block', width: '100%', marginBottom: '12px', background: '#dcfce7', color: '#166534' }}>{forgotPwdSuccess}</div>}
+            
+            <div className="input-group">
+              <label>Username</label>
+              <input 
+                placeholder="e.g. adjuster_user, customer_user, or admin" 
+                value={forgotUsername}
+                onChange={(e) => setForgotUsername(e.target.value)}
+                required 
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Customer / Employee ID</label>
+              <input 
+                placeholder="e.g. ADJ-A12B98C, CUST-C7F8B2E, or ADM-SYSTEM" 
+                value={forgotCustomerId}
+                onChange={(e) => setForgotCustomerId(e.target.value)}
+                required 
+              />
+            </div>
+
+            <div className="input-group">
+              <label>New Password</label>
+              <input 
+                type="password"
+                placeholder="••••••••" 
+                value={forgotNewPassword}
+                onChange={(e) => setForgotNewPassword(e.target.value)}
+                required 
+              />
+            </div>
+
+            <button type="submit">Reset & Save New Password</button>
+            <p style={{marginTop: '1.2rem', textAlign: 'center', fontSize: '13px'}}>
+              <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPasswordMode(false); }}>
+                ← Back to Login
+              </a>
+            </p>
           </form>
         </div>
       </main>
@@ -603,8 +700,16 @@ function App() {
               }
             </button>
             
+            {isLoginMode && (
+              <p style={{marginTop: '0.8rem', textAlign: 'center', fontSize: '12px'}}>
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPasswordMode(true); }} style={{ color: 'var(--mono-text-light)' }}>
+                  🔑 Forgot Password? Reset Here
+                </a>
+              </p>
+            )}
+            
             {(loginRoleTab === 'customer' || !isLoginMode) && (
-              <p style={{marginTop: '1.2rem', textAlign: 'center', fontSize: '13px'}}>
+              <p style={{marginTop: '0.6rem', textAlign: 'center', fontSize: '13px'}}>
                 <a href="#" onClick={(e) => { e.preventDefault(); setIsLoginMode(!isLoginMode); }}>
                   {isLoginMode ? 'New Customer? Register Profile' : 'Already registered? Login'}
                 </a>
@@ -641,11 +746,54 @@ function App() {
             </span>
             <small style={{ fontSize: '10px', opacity: 0.8, fontFamily: 'var(--font-mono)' }}>ID: {user.customer_id}</small>
           </div>
+          <button 
+            onClick={() => setShowSelfChangePwdModal(true)} 
+            title="Change Password" 
+            style={{
+              background: 'var(--mono-surface-dark)', 
+              border: '2px solid var(--mono-text-dark)', 
+              color: 'var(--mono-text-dark)', 
+              padding: '6px 10px', 
+              fontSize: '11px',
+              fontWeight: 'bold',
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Key size={14} /> Password
+          </button>
           <button className="icon-btn-logout" onClick={logout} title="Logout" style={{background: 'var(--mono-surface-dark)', border: '2px solid var(--mono-text-dark)', color: 'var(--mono-text-dark)', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
             <LogOut size={16} />
           </button>
         </div>
       </header>
+
+      {/* Modal for Self Password Change */}
+      {showSelfChangePwdModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="panel" style={{ width: '380px', background: '#fff', padding: '20px' }}>
+            <h2 style={{ marginTop: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>🔑 Update Account Password</h2>
+            <form onSubmit={handleSelfChangePassword}>
+              <div className="input-group" style={{ marginTop: '12px' }}>
+                <label>New Password</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={resetPwdValue} 
+                  onChange={(e) => setResetPwdValue(e.target.value)} 
+                  required 
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                <button type="submit" style={{ flex: 1 }}>Save New Password</button>
+                <button type="button" onClick={() => setShowSelfChangePwdModal(false)} style={{ background: 'var(--mono-surface-dark)', color: 'var(--mono-text-dark)' }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {error && <div className="error-banner">{error}</div>}
       {resetAlertMsg && (
