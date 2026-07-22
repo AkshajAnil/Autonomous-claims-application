@@ -1,64 +1,71 @@
-# 🚀 Production & Free Cloud Deployment Guide
+# 🏗️ Production Distributed Microservices Deployment Architecture
 
-This repository contains the complete **Autonomous Claims Processing System**. You can deploy it using **Render (Free Cloud)** or run it locally/on VPS using **Docker Compose (with Nginx & Redis)**.
-
----
-
-## Option 1: Free Cloud Deployment on Render (Recommended)
-
-### Step 1: Create a PostgreSQL Database on Render
-1. Go to [Render Dashboard](https://dashboard.render.com/) and click **New +** $\rightarrow$ **PostgreSQL**.
-2. Set Name: `claims-db`
-3. Select **Free Plan**.
-4. Once created, copy the **Internal Database URL** (or External Database URL).
-
-### Step 2: Create a Web Service for Backend
-1. Click **New +** $\rightarrow$ **Web Service**.
-2. Connect your GitHub Repository: `Autonomous-claims-application`.
-3. Set the following settings:
-   - **Root Directory:** `backend`
-   - **Environment:** `Python 3`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Add the following **Environment Variables**:
-   - `DATABASE_URL`: *(Paste your Render PostgreSQL URL)*
-   - `GEMINI_API_KEY`: *(Your Google Gemini API Key)*
-   - `PYTHON_VERSION`: `3.11.9`
-   - `S3_ENDPOINT`: *(Optional: Backblaze B2 S3 endpoint, e.g., `s3.us-west-004.backblazeb2.com`)*
-   - `S3_ACCESS_KEY`: *(Optional: Backblaze B2 keyID)*
-   - `S3_SECRET_KEY`: *(Optional: Backblaze B2 applicationKey)*
-   - `S3_BUCKET`: *(Optional: Backblaze B2 bucket name)*
-   - `REDIS_URL`: *(Optional: Render Redis internal URL)*
-5. Click **Create Web Service**.
+This project is structured as a fully decoupled, production-grade microservice application. Each component can be deployed independently on **separate cloud instances/servers** or orchestrated together.
 
 ---
 
-## Option 2: Full Docker Stack Deployment (Nginx + Redis + Postgres)
+## 🏛️ Microservice Architecture & Instance Breakdown
 
-Run the entire microservice architecture (Nginx Load Balancer, 3 Backend Replicas, Redis Cache, Postgres Database, React Frontend) with a single command:
+```
+ ┌────────────────┐       ┌────────────────┐       ┌────────────────────────┐
+ │ Frontend Host  │ ────► │ Nginx Proxy /  │ ────► │ FastAPI Backend        │
+ │ (Vercel/S3/CDN)│       │ Load Balancer  │       │ (Instance 1..N)        │
+ └────────────────┘       └────────────────┘       └───────────┬────────────┘
+                                                               │
+                                               ┌───────────────┴───────────────┐
+                                               ▼                               ▼
+                                    ┌────────────────────┐          ┌────────────────────┐
+                                    │ PostgreSQL Database│          │ Redis Cache Cluster│
+                                    │ (Managed Instance) │          │ (Managed Instance) │
+                                    └────────────────────┘          └────────────────────┘
+```
+
+---
+
+## 1. Backend Microservice Instance (`/backend`)
+Deployed as an isolated Python API container or server.
+
+- **Independent Files:** `Dockerfile`, `Procfile`, `.python-version`, `requirements.txt`, `.env.example`
+- **Port:** `8000`
+- **Environment Variables Needed:**
+  - `DATABASE_URL`: Connection string to PostgreSQL instance
+  - `REDIS_URL`: Connection string to Redis instance
+  - `GEMINI_API_KEY`: Google Gemini AI Key
+  - `S3_ENDPOINT`: Backblaze B2 / AWS S3 Endpoint
+
+### Standalone Backend Deployment:
+```bash
+cd backend
+docker build -t claims-backend .
+docker run -p 8000:8000 --env-file .env claims-backend
+```
+
+---
+
+## 2. Frontend Microservice Instance (`/frontend`)
+Deployed independently as a static web app or React container.
+
+- **Independent Files:** `Dockerfile`, `package.json`, `vite.config.js`
+- **Port:** `80` (or host port)
+
+### Standalone Frontend Deployment:
+```bash
+cd frontend
+docker build -t claims-frontend .
+docker run -p 80:80 claims-frontend
+```
+
+---
+
+## 3. Database & Cache Instances
+- **PostgreSQL 15+ Instance:** Managed database (e.g. AWS RDS, Render Postgres, Supabase).
+- **Redis 7+ Instance:** Managed cache (e.g. AWS ElastiCache, Render Redis, Upstash).
+
+---
+
+## 4. Single-Command Local/Staging Orchestration
+To test the full distributed stack locally or on a single staging VPS:
 
 ```bash
 docker-compose up --build -d
-```
-
-### Stack Architecture:
-- 🌐 **Nginx Load Balancer (`:80`):** Handles incoming web traffic, load-balances requests across 3 backend containers using `least_conn`, and proxies SSE live streams without buffering.
-- ⚡ **Redis Cache (`:6379`):** High-speed in-memory session management and state caching.
-- 🐘 **PostgreSQL DB (`:5432`):** Persistent transactional storage for claims, audit logs, and users.
-- ⚙️ **FastAPI Backend (3 Replicas):** Autonomous AI claims evaluation engine.
-- 💻 **React Frontend:** User dashboard.
-
----
-
-## 📁 Repository Structure Overview
-
-```
-├── .python-version      # Force Python 3.11.9 runtime
-├── DEPLOYMENT.md        # Official Deployment Guide
-├── docker-compose.yml   # Multi-container orchestration (Nginx, Redis, Postgres, Backend x3, Frontend)
-├── nginx.conf           # Load balancer & SSE streaming proxy config
-├── backend/             # FastAPI App, AI Agent & ML Services
-│   ├── app/             # Application source code
-│   └── requirements.txt # Pinned Python dependencies
-└── frontend/            # React UI Dashboard
 ```
