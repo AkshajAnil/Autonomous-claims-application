@@ -603,11 +603,13 @@ function App() {
               }
             </button>
             
-            <p style={{marginTop: '1.2rem', textAlign: 'center', fontSize: '13px'}}>
-              <a href="#" onClick={(e) => { e.preventDefault(); setIsLoginMode(!isLoginMode); }}>
-                {isLoginMode ? 'New Customer? Register Profile' : 'Already registered? Login'}
-              </a>
-            </p>
+            {(loginRoleTab === 'customer' || !isLoginMode) && (
+              <p style={{marginTop: '1.2rem', textAlign: 'center', fontSize: '13px'}}>
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsLoginMode(!isLoginMode); }}>
+                  {isLoginMode ? 'New Customer? Register Profile' : 'Already registered? Login'}
+                </a>
+              </p>
+            )}
           </form>
         </div>
       </main>
