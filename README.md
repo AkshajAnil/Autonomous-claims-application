@@ -102,10 +102,6 @@ npm run dev
 
 ---
 
-## 🐳 Docker Stack (Optional Local Orchestration)
+## 📖 Deployment Documentation
 
-```bash
-docker-compose up --build -d
-```
-
-For detailed cloud deployment instructions (Render, AWS, DigitalOcean, VPS), refer to **[DEPLOYMENT.md](DEPLOYMENT.md)**.
+For complete Docker Compose orchestration, VPS hosting, and cloud deployment guidelines (Render, AWS, DigitalOcean), refer to **[DEPLOYMENT.md](DEPLOYMENT.md)**.

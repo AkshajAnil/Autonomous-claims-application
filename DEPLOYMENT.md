@@ -46,34 +46,16 @@ npm run dev
 
 ### 🐳 Option 2: Docker Compose Orchestration
 
-#### Step 1: Clone & Configure
+#### Step 1: Clone Repository
 ```bash
 git clone https://github.com/your-username/your-repository-name.git
 cd your-repository-name
-cp backend/.env.example backend/.env
 ```
 
-#### Step 2: Configure Production Environment File
-Create `.env` in `backend/`:
-
+#### Step 2: Configure Environment
 ```bash
-cat << 'EOF' > backend/.env
-DATABASE_URL=postgresql://your_db_user:your_db_password@postgres_db:5432/your_db_name
-REDIS_URL=redis://redis_cache:6379/0
-GEMINI_API_KEY=your_google_gemini_api_key_here
-GEMINI_MODEL=gemini-1.5-flash
-CORS_ORIGINS=*
-JWT_SECRET=your_jwt_secret_key_here
-JWT_EXPIRATION_MINUTES=60
-INVESTIGATION_VERSION=v1.0
-
-# Backblaze B2 S3 Object Storage (REQUIRED for Evidence Storage)
-S3_ENDPOINT=your_s3_endpoint_here
-S3_ACCESS_KEY=your_s3_access_key_here
-S3_SECRET_KEY=your_s3_secret_key_here
-S3_BUCKET=your_s3_bucket_name_here
-S3_SECURE=true
-EOF
+cp backend/.env.example backend/.env
+# Edit backend/.env and populate your environment variables
 ```
 
 #### Step 3: Launch Stack
