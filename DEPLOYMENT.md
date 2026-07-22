@@ -138,8 +138,8 @@ Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-
 | `S3_ACCESS_KEY` | **YES** | `""` | Backblaze B2 `keyID` / S3 Access Key |
 | `S3_SECRET_KEY` | **YES** | `""` | Backblaze B2 `applicationKey` / S3 Secret Key |
 | `S3_BUCKET` | **YES** | `""` | Target storage bucket name |
-| `REDIS_URL` | OPTIONAL | `redis://localhost:6379/0` | Redis session cache URL (falls back to memory if offline) |
-| `JWT_SECRET` | **YES** | `supersecretkey` | HMAC SHA-256 key for signing auth tokens |
+| `REDIS_URL` | OPTIONAL | `""` | Redis session cache URL (falls back to local memory if offline) |
+| `JWT_SECRET` | **YES** | `""` | Secret key for signing auth tokens (e.g. `your_jwt_secret_here`) |
 | `JWT_EXPIRATION_MINUTES` | OPTIONAL | `60` | JWT token expiration time in minutes |
 
 ---
