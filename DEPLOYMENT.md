@@ -55,11 +55,11 @@ JWT_EXPIRATION_MINUTES=60
 INVESTIGATION_VERSION=v1.0
 
 # Backblaze B2 S3 Object Storage (REQUIRED for Evidence Storage)
-# Note: S3_ENDPOINT depends on your bucket region (e.g. s3.us-west-004.backblazeb2.com, s3.us-east-005.backblazeb2.com)
-S3_ENDPOINT=s3.us-west-004.backblazeb2.com
-S3_ACCESS_KEY=your_backblaze_key_id
-S3_SECRET_KEY=your_backblaze_application_key
-S3_BUCKET=your_bucket_name
+# Note: S3_ENDPOINT depends on your bucket region (e.g., s3.us-west-004.backblazeb2.com)
+S3_ENDPOINT=your_s3_endpoint_here
+S3_ACCESS_KEY=your_s3_access_key_here
+S3_SECRET_KEY=your_s3_secret_key_here
+S3_BUCKET=your_s3_bucket_name_here
 S3_SECURE=true
 EOF
 ```
@@ -135,10 +135,10 @@ Deploy the [`frontend/`](file:///C:/Users/Akshaj%20Anil/Documents/Codex/2026-07-
 | :--- | :---: | :--- | :--- |
 | `DATABASE_URL` | **YES** | `postgresql://...` | PostgreSQL connection string |
 | `GEMINI_API_KEY` | **YES** | `""` | Google Gemini API key for multimodal vision & LLM |
-| `S3_ENDPOINT` | **YES** | `s3.us-west-004.backblazeb2.com` | Backblaze B2 / AWS S3 Endpoint URL (varies by bucket region) |
+| `S3_ENDPOINT` | **YES** | `""` | Backblaze B2 / AWS S3 Endpoint URL (e.g., `s3.us-west-004.backblazeb2.com`) |
 | `S3_ACCESS_KEY` | **YES** | `""` | Backblaze B2 `keyID` / S3 Access Key |
 | `S3_SECRET_KEY` | **YES** | `""` | Backblaze B2 `applicationKey` / S3 Secret Key |
-| `S3_BUCKET` | **YES** | `claim-evidence` | Target storage bucket name |
+| `S3_BUCKET` | **YES** | `""` | Target storage bucket name |
 | `REDIS_URL` | OPTIONAL | `redis://localhost:6379/0` | Redis session cache URL (falls back to memory if offline) |
 | `JWT_SECRET` | **YES** | `supersecretkey` | HMAC SHA-256 key for signing auth tokens |
 | `JWT_EXPIRATION_MINUTES` | OPTIONAL | `60` | JWT token expiration time in minutes |
