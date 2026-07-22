@@ -690,7 +690,7 @@ function App() {
             <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', background: 'var(--mono-surface-dark)', padding: '4px', borderRadius: '6px' }}>
               <button 
                 type="button" 
-                onClick={() => setLoginRoleTab('customer')}
+                onClick={() => { setLoginRoleTab('customer'); setIsLoginMode(true); }}
                 style={{ 
                   flex: 1, 
                   padding: '8px 4px', 
@@ -708,7 +708,7 @@ function App() {
               </button>
               <button 
                 type="button" 
-                onClick={() => setLoginRoleTab('adjuster')}
+                onClick={() => { setLoginRoleTab('adjuster'); setIsLoginMode(true); }}
                 style={{ 
                   flex: 1, 
                   padding: '8px 4px', 
@@ -726,7 +726,7 @@ function App() {
               </button>
               <button 
                 type="button" 
-                onClick={() => setLoginRoleTab('admin')}
+                onClick={() => { setLoginRoleTab('admin'); setIsLoginMode(true); }}
                 style={{ 
                   flex: 1, 
                   padding: '8px 4px', 
@@ -804,10 +804,10 @@ function App() {
               </p>
             )}
             
-            {(loginRoleTab === 'customer' || !isLoginMode) && (
+            {loginRoleTab === 'customer' && (
               <p style={{marginTop: '0.6rem', textAlign: 'center', fontSize: '13px'}}>
                 <a href="#" onClick={(e) => { e.preventDefault(); setIsLoginMode(!isLoginMode); }}>
-                  {isLoginMode ? 'New Customer? Register Profile' : 'Already registered? Login'}
+                  {isLoginMode ? 'New Customer? Register Profile' : 'Already registered? Customer Login'}
                 </a>
               </p>
             )}
