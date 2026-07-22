@@ -17,6 +17,8 @@ services:
   backend1:
     build: ./backend
     container_name: claims_backend_1
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
       - REDIS_URL=redis://redis_cache:6379/0
@@ -27,6 +29,8 @@ services:
   backend2:
     build: ./backend
     container_name: claims_backend_2
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
       - REDIS_URL=redis://redis_cache:6379/0
@@ -37,6 +41,8 @@ services:
   backend3:
     build: ./backend
     container_name: claims_backend_3
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=postgresql://claims_user:claims_pass@postgres_db:5432/claims_db
       - REDIS_URL=redis://redis_cache:6379/0
@@ -57,9 +63,14 @@ services:
       POSTGRES_DB: claims_db
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis_cache:
     image: redis:7-alpine
     container_name: claims_redis
     ports:
       - "6379:6379"
+
+volumes:
+  postgres_data:
