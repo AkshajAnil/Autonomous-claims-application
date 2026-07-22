@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import get_settings
@@ -29,6 +29,21 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        migrations = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(120)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMP",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(160)"
+        ]
+        for statement in migrations:
+            try:
+                if engine.dialect.name != "postgresql":
+                    statement = statement.replace(" IF NOT EXISTS", "")
+                conn.execute(text(statement))
+            except Exception:
+                pass
 
 
 def get_db():
