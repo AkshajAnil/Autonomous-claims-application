@@ -214,8 +214,7 @@ class PasswordChangeRequest(BaseModel):
 
 class SelfResetPasswordRequest(BaseModel):
     username: str
-    customer_id: str
-    new_password: str
+    customer_id: str | None = None
 
 
 class TokenResetPasswordRequest(BaseModel):

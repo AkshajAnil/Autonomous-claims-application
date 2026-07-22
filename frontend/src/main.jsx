@@ -86,9 +86,9 @@ function App() {
   const [isForgotPasswordMode, setIsForgotPasswordMode] = useState(false);
   const [forgotUsername, setForgotUsername] = useState('');
   const [forgotCustomerId, setForgotCustomerId] = useState('');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotPwdMsg, setForgotPwdMsg] = useState('');
   const [forgotPwdSuccess, setForgotPwdSuccess] = useState('');
+  const [forgotResetInfo, setForgotResetInfo] = useState(null);
   const [showSelfChangePwdModal, setShowSelfChangePwdModal] = useState(false);
 
   const selected = useMemo(
@@ -471,28 +471,23 @@ function App() {
     event.preventDefault();
     setForgotPwdMsg('');
     setForgotPwdSuccess('');
+    setForgotResetInfo(null);
     try {
       const response = await fetch(`${API_BASE}/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: forgotUsername,
-          customer_id: forgotCustomerId,
-          new_password: forgotNewPassword
+          customer_id: forgotCustomerId
         })
       });
       if (!response.ok) {
         const resData = await response.json();
-        throw new Error(resData.detail || 'Password reset failed.');
+        throw new Error(resData.detail || 'Password reset request failed.');
       }
-      setForgotPwdSuccess('Password reset successfully! You can now log in.');
-      setTimeout(() => {
-        setIsForgotPasswordMode(false);
-        setForgotUsername('');
-        setForgotCustomerId('');
-        setForgotNewPassword('');
-        setForgotPwdSuccess('');
-      }, 1800);
+      const data = await response.json();
+      setForgotResetInfo(data);
+      setForgotPwdSuccess(`Password reset link dispatched via email to ${data.email}.`);
     } catch (e) {
       setForgotPwdMsg(e.message);
     }
@@ -641,17 +636,51 @@ function App() {
           <div className="brand-header">
             <Key size={40} className="brand-icon" />
             <h1>Self-Service Password Reset</h1>
-            <p className="brand-sub">Verify Account Identity & Establish New Password</p>
+            <p className="brand-sub">Request Password Reset Link via Registered Email</p>
           </div>
           <form className="panel claim-form" onSubmit={handleSelfForgotPassword}>
             <h2>Reset Account Password</h2>
             {forgotPwdMsg && <div className="error-banner">{forgotPwdMsg}</div>}
             {forgotPwdSuccess && <div className="status-pill" style={{ display: 'block', width: '100%', marginBottom: '12px', background: '#dcfce7', color: '#166534' }}>{forgotPwdSuccess}</div>}
             
+            {forgotResetInfo && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '6px', marginBottom: '14px', fontSize: '12px', color: '#166534' }}>
+                <strong>🔗 Password Reset Activation Link:</strong>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '6px', marginBottom: '8px' }}>
+                  <input 
+                    readOnly 
+                    value={forgotResetInfo.reset_url} 
+                    style={{ fontSize: '11px', background: '#fff', padding: '4px 8px', border: '1px solid #86efac', flex: 1 }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      navigator.clipboard.writeText(forgotResetInfo.reset_url);
+                      alert('Reset Link copied to clipboard!');
+                    }}
+                    style={{ padding: '4px 10px', fontSize: '11px', background: '#166534', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    Copy Link
+                  </button>
+                  <a 
+                    href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(forgotResetInfo.email)}&su=${encodeURIComponent("🔑 Password Reset Activation Link")}&body=${encodeURIComponent(`Hello ${forgotResetInfo.full_name},\n\nA password reset request was initiated for your account.\n\nUsername: ${forgotResetInfo.username}\n\nPlease click the link below to set your new password:\n${forgotResetInfo.reset_url}\n\nRegards,\nClaims Guard System`)}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ padding: '4px 10px', fontSize: '11px', background: '#2563eb', color: '#fff', textDecoration: 'none', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
+                  >
+                    <Mail size={12} /> Send via Gmail
+                  </a>
+                </div>
+                <small style={{ display: 'block', color: '#15803d' }}>
+                  Target Recipient: {forgotResetInfo.email}
+                </small>
+              </div>
+            )}
+
             <div className="input-group">
-              <label>Username</label>
+              <label>Account Username or Email</label>
               <input 
-                placeholder="e.g. adjuster_user, customer_user, or admin" 
+                placeholder="Enter your username or registered email" 
                 value={forgotUsername}
                 onChange={(e) => setForgotUsername(e.target.value)}
                 required 
@@ -659,27 +688,15 @@ function App() {
             </div>
 
             <div className="input-group">
-              <label>Customer / Employee ID</label>
+              <label>Customer / Account ID (Optional)</label>
               <input 
-                placeholder="e.g. ADJ-A12B98C, CUST-C7F8B2E, or ADM-SYSTEM" 
+                placeholder="e.g. CUST-C7F8B2E" 
                 value={forgotCustomerId}
                 onChange={(e) => setForgotCustomerId(e.target.value)}
-                required 
               />
             </div>
 
-            <div className="input-group">
-              <label>New Password</label>
-              <input 
-                type="password"
-                placeholder="••••••••" 
-                value={forgotNewPassword}
-                onChange={(e) => setForgotNewPassword(e.target.value)}
-                required 
-              />
-            </div>
-
-            <button type="submit">Reset & Save New Password</button>
+            <button type="submit">Send Password Reset Link</button>
             <p style={{marginTop: '1.2rem', textAlign: 'center', fontSize: '13px'}}>
               <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPasswordMode(false); }}>
                 ← Back to Login
@@ -812,7 +829,7 @@ function App() {
               }
             </button>
             
-            {isLoginMode && (
+            {isLoginMode && loginRoleTab === 'customer' && (
               <p style={{marginTop: '0.8rem', textAlign: 'center', fontSize: '12px'}}>
                 <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPasswordMode(true); }} style={{ color: 'var(--mono-text-light)' }}>
                   🔑 Forgot Password? Reset Here

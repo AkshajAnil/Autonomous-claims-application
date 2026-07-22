@@ -275,19 +275,34 @@ def change_password(req: PasswordChangeRequest, current_user: User = Depends(get
 
 
 @app.post("/forgot-password")
-def forgot_password(req: SelfResetPasswordRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == req.username).first()
-    if not user or user.customer_id.strip().upper() != req.customer_id.strip().upper():
-        raise HTTPException(status_code=400, detail="Invalid Username or Customer/Employee ID combination.")
+def forgot_password(req: SelfResetPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == req.username.strip().lower()).first()
+    if not user and "@" in req.username:
+        user = db.query(User).filter(User.email == req.username.strip().lower()).first()
         
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account is deactivated. Contact system administrator.")
+    if not user:
+        raise HTTPException(status_code=400, detail="Account username or email not found.")
         
-    user.password_hash = get_password_hash(req.new_password)
-    user.must_change_password = False
+    if req.customer_id and req.customer_id.strip() and user.customer_id.strip().upper() != req.customer_id.strip().upper():
+        raise HTTPException(status_code=400, detail="Invalid Customer ID verification.")
+        
+    reset_token = secrets.token_urlsafe(32)
+    user.reset_token = reset_token
+    user.reset_token_expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
     db.commit()
-    log_audit(db, user.id, "Self-Service Password Reset", {"username": user.username, "role": user.role})
-    return {"message": "Password reset successfully! You may now log in with your new password."}
+    
+    recipient_email = user.email or f"{user.username}@company.com"
+    reset_url = f"{settings.frontend_url}/?setup_token={reset_token}"
+    background_tasks.add_task(send_activation_email, recipient_email, user.full_name or user.username, user.username, reset_url)
+    
+    log_audit(db, user.id, "Forgot Password Token Link Generated", {"username": user.username, "email": recipient_email})
+    return {
+        "message": f"Password reset link has been dispatched to {recipient_email}.",
+        "email": recipient_email,
+        "reset_url": reset_url,
+        "username": user.username,
+        "full_name": user.full_name or user.username
+    }
 
 
 @app.post("/logout")
