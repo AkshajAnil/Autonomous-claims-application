@@ -789,7 +789,7 @@ function App() {
             </div>
           )}
           
-          <form className="panel claim-form" key={loginRoleTab + '-' + (isLoginMode ? 'login' : 'register')} onSubmit={handleAuth}>
+          <form className="panel claim-form" key={loginRoleTab + '-' + (isLoginMode ? 'login' : 'register')} onSubmit={handleAuth} autoComplete="off">
             <h2>
               {isLoginMode 
                 ? (loginRoleTab === 'adjuster' ? '⚖️ Claims Adjuster Login Portal' : loginRoleTab === 'admin' ? '🛡️ Administrator Executive Portal' : '👥 Policyholder Customer Login')
@@ -813,6 +813,7 @@ function App() {
                 name="username" 
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
+                autoComplete="off"
                 placeholder={
                   isLoginMode 
                     ? (loginRoleTab === 'adjuster' ? 'e.g. adjuster_user' : loginRoleTab === 'admin' ? 'e.g. admin' : 'Enter username') 
@@ -846,6 +847,7 @@ function App() {
                 type="password" 
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
+                autoComplete="new-password"
                 placeholder="••••••••" 
                 required 
               />
