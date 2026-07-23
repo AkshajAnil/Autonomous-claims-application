@@ -1116,13 +1116,19 @@ function App() {
                       )}
 
                       <div style={{ border: '1px solid var(--mono-surface-dark)', padding: '12px', background: 'var(--mono-surface)' }}>
-                        <span className="eyebrow">Claim Details</span>
+                        <span className="eyebrow">Claim Details & Statement</span>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', marginTop: '6px' }}>
                           <div><strong>Claimant:</strong> {selected.claimant_name}</div>
                           <div><strong>Policy #:</strong> {selected.policy_number}</div>
                           <div><strong>Location:</strong> {selected.incident_location}</div>
                           <div><strong>Date:</strong> {selected.incident_date ? new Date(selected.incident_date).toLocaleDateString() : '-'}</div>
                         </div>
+                        {selected.description && (
+                          <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '10px 12px', borderRadius: '6px', marginTop: '10px' }}>
+                            <strong style={{ fontSize: '12px', color: '#334155', display: 'block', marginBottom: '4px' }}>📝 Policyholder Statement / Description:</strong>
+                            <p style={{ margin: 0, fontSize: '12px', color: '#1e293b', lineHeight: '1.5' }}>{selected.description}</p>
+                          </div>
+                        )}
                       </div>
 
                       {selected.investigation_summary && (
@@ -1390,6 +1396,13 @@ function App() {
                       <div><strong>Incident Location:</strong> {selected.incident_location}</div>
                       <div><strong>Current Workflow:</strong> {selected.status}</div>
                     </div>
+
+                    {selected.description && (
+                      <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '10px 12px', borderRadius: '6px', marginTop: '10px' }}>
+                        <strong style={{ fontSize: '12px', color: '#334155', display: 'block', marginBottom: '4px' }}>📝 Policyholder Statement / Description:</strong>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#1e293b', lineHeight: '1.5' }}>{selected.description}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Multi-Sentence Decision Explanation Banner */}
@@ -1520,119 +1533,42 @@ function App() {
                     </div>
                   )}
 
-                  {/* Claim Details Cards (Visual substitute for Universal Feature Inspector JSON) */}
-                  {selected.verification_metadata?.universal_features && (() => {
-                    const features = selected.verification_metadata.universal_features;
-                    const featureCards = [];
-                    const friendlyFeatures = {
-                      identity_verified: { icon: '🪪', label: 'Identity Verified' },
-                      face_match: { icon: '🤳', label: 'Photo Matches ID' },
-                      liveness_passed: { icon: '👤', label: 'Live Person Verified' },
-                      document_authentic: { icon: '📄', label: 'Documents Genuine' },
-                      location_consistent: { icon: '📍', label: 'Location Consistent' },
-                      weather_consistent: { icon: '🌦️', label: 'Weather Matches Claim' },
-                      disaster_confirmed: { icon: '🌪️', label: 'Disaster Area Confirmed' },
-                      image_authentic: { icon: '🖼️', label: 'Photos Authentic' },
-                      damage_consistent: { icon: '🔧', label: 'Damage Matches Claim' },
-                      policy_valid: { icon: '📋', label: 'Policy Active' },
-                      coverage_confirmed: { icon: '✅', label: 'Coverage Confirmed' },
-                      claim_within_limit: { icon: '💰', label: 'Within Limit' }
-                    };
-                    
-                    Object.entries(features).forEach(([key, val]) => {
-                      if (typeof val === 'object' && val !== null && 'value' in val) {
-                        const meta = friendlyFeatures[key] || { icon: '📋', label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) };
-                        featureCards.push({
-                          key,
-                          icon: meta.icon,
-                          label: meta.label,
-                          passed: val.value === true || val.value === 'true',
-                          confidence: val.confidence
-                        });
-                      }
-                    });
-
-                    return featureCards.length > 0 ? (
-                      <div className="panel">
-                        <h3>🔎 Claim Verification Breakdown</h3>
-                        <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>Detailed findings for each aspect of this claim.</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '8px' }}>
-                          {featureCards.map(card => (
-                            <div key={card.key} style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              padding: '10px 12px',
-                              borderRadius: '8px',
-                              background: card.passed ? '#f0fdf4' : '#fef2f2',
-                              border: `1px solid ${card.passed ? '#bbf7d0' : '#fecaca'}`
-                            }}>
-                              <span style={{ fontSize: '18px' }}>{card.icon}</span>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>{card.label}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                                  <span style={{
-                                    fontSize: '10px', fontWeight: '700',
-                                    color: card.passed ? '#16a34a' : '#dc2626'
-                                  }}>
-                                    {card.passed ? 'Verified' : 'Flagged'}
-                                  </span>
-                                  {card.confidence != null && (
-                                    <span style={{ fontSize: '10px', color: '#64748b' }}>({Math.round(card.confidence * 100)}% match)</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null;
-                  })()}
-
-                  {/* AI Evidence Summary (Visual substitute for Evidence Inspector JSON) */}
+                  {/* AI Evidence Summary */}
                   {selected.verification_metadata?.evidence && (() => {
                     const ev = selected.verification_metadata.evidence;
                     const cards = [];
 
                     if (ev.gemini) {
-                      cards.push({
-                        icon: '🔍', title: 'AI Photo Inspection',
-                        items: [
-                          ev.gemini.damage_summary && { label: 'Observation', value: ev.gemini.damage_summary },
-                          ev.gemini.consistency && { label: 'Consistency', value: ev.gemini.consistency },
-                          ev.gemini.red_flags && { label: 'Red Flags', value: ev.gemini.red_flags },
-                          ev.gemini.confidence && { label: 'Confidence', value: ev.gemini.confidence }
-                        ].filter(Boolean)
-                      });
+                      const items = [
+                        ev.gemini.damage_summary && { label: 'Observation', value: ev.gemini.damage_summary },
+                        ev.gemini.consistency && { label: 'Consistency', value: ev.gemini.consistency },
+                        ev.gemini.red_flags && { label: 'Red Flags', value: ev.gemini.red_flags },
+                        ev.gemini.confidence && { label: 'Confidence', value: ev.gemini.confidence }
+                      ].filter(Boolean);
+                      if (items.length > 0) cards.push({ icon: '🔍', title: 'AI Photo Inspection', items });
                     }
                     if (ev.weather) {
-                      cards.push({
-                        icon: '🌦️', title: 'Local Weather Data',
-                        items: [
-                          ev.weather.rain_mm != null && { label: 'Rainfall', value: `${ev.weather.rain_mm} mm` },
-                          ev.weather.wind_kmh != null && { label: 'Wind Speed', value: `${ev.weather.wind_kmh} km/h` },
-                          ev.weather.weather_verified != null && { label: 'Matches Report', value: ev.weather.weather_verified ? 'Yes ✅' : 'No ❌' }
-                        ].filter(Boolean)
-                      });
+                      const items = [
+                        ev.weather.rain_mm != null && { label: 'Rainfall', value: `${ev.weather.rain_mm} mm` },
+                        ev.weather.wind_kmh != null && { label: 'Wind Speed', value: `${ev.weather.wind_kmh} km/h` },
+                        ev.weather.weather_verified != null && { label: 'Matches Report', value: ev.weather.weather_verified ? 'Yes ✅' : 'No ❌' }
+                      ].filter(Boolean);
+                      if (items.length > 0) cards.push({ icon: '🌦️', title: 'Local Weather Data', items });
                     }
                     if (ev.policy) {
-                      cards.push({
-                        icon: '📋', title: 'Policy Verification',
-                        items: [
-                          ev.policy.policy_type && { label: 'Policy Type', value: ev.policy.policy_type },
-                          ev.policy.coverage_limit && { label: 'Limit', value: `₹${Number(ev.policy.coverage_limit).toLocaleString()}` },
-                          ev.policy.status && { label: 'Policy Status', value: ev.policy.status }
-                        ].filter(Boolean)
-                      });
+                      const items = [
+                        ev.policy.policy_type && { label: 'Policy Type', value: ev.policy.policy_type },
+                        ev.policy.coverage_limit && { label: 'Limit', value: `₹${Number(ev.policy.coverage_limit).toLocaleString()}` },
+                        ev.policy.status && { label: 'Policy Status', value: ev.policy.status }
+                      ].filter(Boolean);
+                      if (items.length > 0) cards.push({ icon: '📋', title: 'Policy Verification', items });
                     }
                     if (ev.osm) {
-                      cards.push({
-                        icon: '🗺️', title: 'Location Mapping',
-                        items: [
-                          ev.osm.display_name && { label: 'Address', value: ev.osm.display_name },
-                          ev.osm.type && { label: 'Zone Type', value: ev.osm.type }
-                        ].filter(Boolean)
-                      });
+                      const items = [
+                        ev.osm.display_name && { label: 'Address', value: ev.osm.display_name },
+                        ev.osm.type && { label: 'Zone Type', value: ev.osm.type }
+                      ].filter(Boolean);
+                      if (items.length > 0) cards.push({ icon: '🗺️', title: 'Location Mapping', items });
                     }
 
                     return cards.length > 0 ? (
