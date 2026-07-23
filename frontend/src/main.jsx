@@ -1440,27 +1440,45 @@ function App() {
                     </div>
                   )}
 
-                  {/* Verification Status Badges */}
+                  {/* Verification Checks Summary */}
                   {selected.verification_metadata?.verification_status && (
                     <div className="panel">
-                      <h3>Verification Sources Status</h3>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+                      <h3>✅ Automated Verification Checks</h3>
+                      <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>Summary of automated background checks executed for this claim.</p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
                         {Object.entries(selected.verification_metadata.verification_status).map(([src, obj]) => {
                           const status = obj.status || "SKIPPED";
                           const isOk = status === "SUCCESS";
                           const isFail = status === "FAILED";
+                          const friendlyNames = {
+                            identity: '🪪 Identity Check',
+                            policy: '📋 Policy Check',
+                            location: '📍 Location Verification',
+                            weather: '🌦️ Weather Records',
+                            news: '📰 News Verification',
+                            gdacs: '🌍 Disaster Records',
+                            gemini_vision: '🔍 Photo Inspection',
+                            ocr: '📄 Document Scan',
+                            osm: '🗺️ Map Verification'
+                          };
+                          const friendlyStatus = isOk ? 'Verified ✅' : isFail ? 'Failed ❌' : 'Not Needed ⏭️';
                           return (
-                            <span key={src} style={{
-                              fontSize: '11px',
-                              padding: '3px 8px',
-                              borderRadius: '12px',
-                              fontWeight: '600',
-                              background: isOk ? '#dcfce7' : isFail ? '#fee2e2' : '#f3f4f6',
-                              color: isOk ? '#166534' : isFail ? '#991b1b' : '#4b5563',
-                              border: `1px solid ${isOk ? '#86efac' : isFail ? '#fca5a5' : '#d1d5db'}`
+                            <div key={src} style={{
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              background: isOk ? '#f0fdf4' : isFail ? '#fef2f2' : '#f9fafb',
+                              border: `1px solid ${isOk ? '#bbf7d0' : isFail ? '#fecaca' : '#e5e7eb'}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px'
                             }}>
-                              {isOk ? '✅' : isFail ? '❌' : '⚠'} {src.toUpperCase()}: {status}
-                            </span>
+                              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>
+                                <div>{friendlyNames[src] || src.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</div>
+                                <div style={{ fontSize: '10px', color: isOk ? '#16a34a' : isFail ? '#dc2626' : '#6b7280', fontWeight: '500', marginTop: '2px' }}>
+                                  {friendlyStatus}
+                                </div>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -1470,15 +1488,16 @@ function App() {
                   {/* Triggered Rules Audit Table */}
                   {selected.verification_metadata?.triggered_rules && (
                     <div className="panel">
-                      <h3>Triggered Rules Audit Trail</h3>
+                      <h3>📊 Risk Scoring Factors</h3>
+                      <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>Key factors that influenced the trust score evaluation.</p>
                       <div style={{ marginTop: '8px', overflowX: 'auto' }}>
                         <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
                           <thead>
                             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
                               <th style={{ padding: '6px' }}>Category</th>
-                              <th style={{ padding: '6px' }}>Rule</th>
-                              <th style={{ padding: '6px' }}>Score Adjustment</th>
-                              <th style={{ padding: '6px' }}>Description</th>
+                              <th style={{ padding: '6px' }}>Verification Factor</th>
+                              <th style={{ padding: '6px' }}>Score Impact</th>
+                              <th style={{ padding: '6px' }}>Details</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1501,31 +1520,148 @@ function App() {
                     </div>
                   )}
 
-                  {/* Universal Feature Viewer (Collapsible) */}
-                  {selected.verification_metadata?.universal_features && (
-                    <div className="panel">
-                      <h3>Universal Feature Inspector (v1.0 Schema)</h3>
-                      <details style={{ marginTop: '8px', fontSize: '11px' }}>
-                        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: 'var(--mono-primary)' }}>Click to view extracted feature vector (domain-agnostic)</summary>
-                        <pre style={{ background: '#1e293b', color: '#f8fafc', padding: '10px', borderRadius: '6px', overflowX: 'auto', marginTop: '6px' }}>
-                          {JSON.stringify(selected.verification_metadata.universal_features, null, 2)}
-                        </pre>
-                      </details>
-                    </div>
-                  )}
+                  {/* Claim Details Cards (Visual substitute for Universal Feature Inspector JSON) */}
+                  {selected.verification_metadata?.universal_features && (() => {
+                    const features = selected.verification_metadata.universal_features;
+                    const featureCards = [];
+                    const friendlyFeatures = {
+                      identity_verified: { icon: '🪪', label: 'Identity Verified' },
+                      face_match: { icon: '🤳', label: 'Photo Matches ID' },
+                      liveness_passed: { icon: '👤', label: 'Live Person Verified' },
+                      document_authentic: { icon: '📄', label: 'Documents Genuine' },
+                      location_consistent: { icon: '📍', label: 'Location Consistent' },
+                      weather_consistent: { icon: '🌦️', label: 'Weather Matches Claim' },
+                      disaster_confirmed: { icon: '🌪️', label: 'Disaster Area Confirmed' },
+                      image_authentic: { icon: '🖼️', label: 'Photos Authentic' },
+                      damage_consistent: { icon: '🔧', label: 'Damage Matches Claim' },
+                      policy_valid: { icon: '📋', label: 'Policy Active' },
+                      coverage_confirmed: { icon: '✅', label: 'Coverage Confirmed' },
+                      claim_within_limit: { icon: '💰', label: 'Within Limit' }
+                    };
+                    
+                    Object.entries(features).forEach(([key, val]) => {
+                      if (typeof val === 'object' && val !== null && 'value' in val) {
+                        const meta = friendlyFeatures[key] || { icon: '📋', label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) };
+                        featureCards.push({
+                          key,
+                          icon: meta.icon,
+                          label: meta.label,
+                          passed: val.value === true || val.value === 'true',
+                          confidence: val.confidence
+                        });
+                      }
+                    });
 
-                  {/* Evidence Inspector (Collapsible Raw JSON) */}
-                  {selected.verification_metadata?.evidence && (
-                    <div className="panel">
-                      <h3>Evidence Inspector (Raw AI & MCP Tools Output)</h3>
-                      <details style={{ marginTop: '8px', fontSize: '11px' }}>
-                        <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: 'var(--mono-primary)' }}>Click to view raw evidence JSON (Gemini, Weather, Policy, GDACS, News, OSM)</summary>
-                        <pre style={{ background: '#0f172a', color: '#38bdf8', padding: '10px', borderRadius: '6px', overflowX: 'auto', marginTop: '6px' }}>
-                          {JSON.stringify(selected.verification_metadata.evidence, null, 2)}
-                        </pre>
-                      </details>
-                    </div>
-                  )}
+                    return featureCards.length > 0 ? (
+                      <div className="panel">
+                        <h3>🔎 Claim Verification Breakdown</h3>
+                        <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>Detailed findings for each aspect of this claim.</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '8px' }}>
+                          {featureCards.map(card => (
+                            <div key={card.key} style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              background: card.passed ? '#f0fdf4' : '#fef2f2',
+                              border: `1px solid ${card.passed ? '#bbf7d0' : '#fecaca'}`
+                            }}>
+                              <span style={{ fontSize: '18px' }}>{card.icon}</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>{card.label}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                                  <span style={{
+                                    fontSize: '10px', fontWeight: '700',
+                                    color: card.passed ? '#16a34a' : '#dc2626'
+                                  }}>
+                                    {card.passed ? 'Verified' : 'Flagged'}
+                                  </span>
+                                  {card.confidence != null && (
+                                    <span style={{ fontSize: '10px', color: '#64748b' }}>({Math.round(card.confidence * 100)}% match)</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* AI Evidence Summary (Visual substitute for Evidence Inspector JSON) */}
+                  {selected.verification_metadata?.evidence && (() => {
+                    const ev = selected.verification_metadata.evidence;
+                    const cards = [];
+
+                    if (ev.gemini) {
+                      cards.push({
+                        icon: '🔍', title: 'AI Photo Inspection',
+                        items: [
+                          ev.gemini.damage_summary && { label: 'Observation', value: ev.gemini.damage_summary },
+                          ev.gemini.consistency && { label: 'Consistency', value: ev.gemini.consistency },
+                          ev.gemini.red_flags && { label: 'Red Flags', value: ev.gemini.red_flags },
+                          ev.gemini.confidence && { label: 'Confidence', value: ev.gemini.confidence }
+                        ].filter(Boolean)
+                      });
+                    }
+                    if (ev.weather) {
+                      cards.push({
+                        icon: '🌦️', title: 'Local Weather Data',
+                        items: [
+                          ev.weather.rain_mm != null && { label: 'Rainfall', value: `${ev.weather.rain_mm} mm` },
+                          ev.weather.wind_kmh != null && { label: 'Wind Speed', value: `${ev.weather.wind_kmh} km/h` },
+                          ev.weather.weather_verified != null && { label: 'Matches Report', value: ev.weather.weather_verified ? 'Yes ✅' : 'No ❌' }
+                        ].filter(Boolean)
+                      });
+                    }
+                    if (ev.policy) {
+                      cards.push({
+                        icon: '📋', title: 'Policy Verification',
+                        items: [
+                          ev.policy.policy_type && { label: 'Policy Type', value: ev.policy.policy_type },
+                          ev.policy.coverage_limit && { label: 'Limit', value: `₹${Number(ev.policy.coverage_limit).toLocaleString()}` },
+                          ev.policy.status && { label: 'Policy Status', value: ev.policy.status }
+                        ].filter(Boolean)
+                      });
+                    }
+                    if (ev.osm) {
+                      cards.push({
+                        icon: '🗺️', title: 'Location Mapping',
+                        items: [
+                          ev.osm.display_name && { label: 'Address', value: ev.osm.display_name },
+                          ev.osm.type && { label: 'Zone Type', value: ev.osm.type }
+                        ].filter(Boolean)
+                      });
+                    }
+
+                    return cards.length > 0 ? (
+                      <div className="panel">
+                        <h3>📋 Verification Evidence Summary</h3>
+                        <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>Visual breakdown of evidence gathered for this claim.</p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                          {cards.map((card, i) => (
+                            <div key={i} style={{
+                              padding: '12px 14px',
+                              borderRadius: '8px',
+                              background: '#f8fafc',
+                              border: '1px solid #e2e8f0'
+                            }}>
+                              <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '16px' }}>{card.icon}</span> {card.title}
+                              </div>
+                              {card.items.map((item, j) => (
+                                <div key={j} style={{ fontSize: '11px', marginBottom: '4px', display: 'flex', gap: '6px' }}>
+                                  <span style={{ color: '#64748b', minWidth: '85px', fontWeight: '600' }}>{item.label}:</span>
+                                  <span style={{ color: '#1e293b', flex: 1 }}>{item.value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
 
                   <div className="panel">
                     <h3>AI Investigation Summary</h3>
