@@ -370,6 +370,7 @@ function App() {
     event.preventDefault();
     setError('');
     setEmpSuccessMsg('');
+    setCreatedEmployeeInfo(null);
     try {
       const response = await fetch(`${API_BASE}/admin/employees`, {
         method: 'POST',
@@ -387,9 +388,8 @@ function App() {
         throw new Error(resData.detail || 'Failed to create employee profile.');
       }
       const data = await response.json();
-      const fullActivationUrl = `${window.location.origin}${window.location.pathname}?setup_token=${data.setup_token}`;
-      setCreatedEmployeeInfo({ ...data, activation_url: fullActivationUrl });
-      setEmpSuccessMsg(`Successfully provisioned ${empRole} profile for ${empName}! Assigned Username: "${data.username}". Password setup link dispatched via Gmail & available below.`);
+      const roleLabel = empRole === 'adjuster' ? 'Adjuster' : 'Admin';
+      setEmpSuccessMsg(`✅ Successfully provisioned ${roleLabel} profile for ${empName}. Username: "${data.username}". Password setup link sent to ${empEmail}.`);
       setEmpName('');
       setEmpEmail('');
       setEmpUsername('');
@@ -432,8 +432,6 @@ function App() {
         throw new Error(resData.detail || 'Password reset request failed.');
       }
       const data = await response.json();
-      setCreatedEmployeeInfo({ ...data, activation_url: data.reset_url });
-      setResetAlertMsg(`Password reset link dispatched via email to ${data.email}.`);
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
@@ -662,39 +660,7 @@ function App() {
             {forgotPwdMsg && <div className="error-banner">{forgotPwdMsg}</div>}
             {forgotPwdSuccess && <div className="status-pill" style={{ display: 'block', width: '100%', marginBottom: '12px', background: '#dcfce7', color: '#166534' }}>{forgotPwdSuccess}</div>}
             
-            {forgotResetInfo && (
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '6px', marginBottom: '14px', fontSize: '12px', color: '#166534' }}>
-                <strong>🔗 Password Reset Activation Link:</strong>
-                <div style={{ display: 'flex', gap: '6px', marginTop: '6px', marginBottom: '8px' }}>
-                  <input 
-                    readOnly 
-                    value={forgotResetInfo.reset_url} 
-                    style={{ fontSize: '11px', background: '#fff', padding: '4px 8px', border: '1px solid #86efac', flex: 1 }}
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => {
-                      navigator.clipboard.writeText(forgotResetInfo.reset_url);
-                      alert('Reset Link copied to clipboard!');
-                    }}
-                    style={{ padding: '4px 10px', fontSize: '11px', background: '#166534', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                  >
-                    Copy Link
-                  </button>
-                  <a 
-                    href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(forgotResetInfo.email)}&su=${encodeURIComponent("🔑 Password Reset Activation Link")}&body=${encodeURIComponent(`Hello ${forgotResetInfo.full_name},\n\nA password reset request was initiated for your account.\n\nUsername: ${forgotResetInfo.username}\n\nPlease click the link below to set your new password:\n${forgotResetInfo.reset_url}\n\nRegards,\nClaims Guard System`)}`}
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    style={{ padding: '4px 10px', fontSize: '11px', background: '#2563eb', color: '#fff', textDecoration: 'none', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
-                  >
-                    <Mail size={12} /> Send via Gmail
-                  </a>
-                </div>
-                <small style={{ display: 'block', color: '#15803d' }}>
-                  Target Recipient: {forgotResetInfo.email}
-                </small>
-              </div>
-            )}
+            
 
             <div className="input-group">
               <label>Registered Email Address</label>
@@ -948,14 +914,7 @@ function App() {
       )}
 
       {error && <div className="error-banner">{error}</div>}
-      {resetAlertMsg && (
-        <div className="error-banner" style={{ borderColor: 'var(--mono-primary)', boxRightShadow: 'var(--mono-primary)', color: 'var(--mono-text-dark)', background: '#fff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>{resetAlertMsg}</span>
-            <button onClick={() => setResetAlertMsg('')} style={{ background: 'var(--mono-surface-dark)', padding: '2px 8px', fontSize: '11px' }}>Dismiss</button>
-          </div>
-        </div>
-      )}
+
 
       {/* CUSTOMER PORTAL */}
       {user.role === 'customer' && (
@@ -1993,40 +1952,6 @@ function App() {
                 <h2>Provision Employee Profile</h2>
                 {empSuccessMsg && <div className="status-pill" style={{ display: 'block', width: '100%', marginBottom: '12px', background: '#dcfce7', color: '#166534' }}>{empSuccessMsg}</div>}
                 
-                {createdEmployeeInfo && (
-                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px', borderRadius: '6px', marginBottom: '14px', fontSize: '12px', color: '#166534' }}>
-                    <strong>🔗 One-Time Password Setup Link:</strong>
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '6px', marginBottom: '8px' }}>
-                      <input 
-                        readOnly 
-                        value={createdEmployeeInfo.activation_url} 
-                        style={{ fontSize: '11px', background: '#fff', padding: '4px 8px', border: '1px solid #86efac', flex: 1 }}
-                      />
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          navigator.clipboard.writeText(createdEmployeeInfo.activation_url);
-                          alert('Activation Link copied to clipboard!');
-                        }}
-                        style={{ padding: '4px 10px', fontSize: '11px', background: '#166534', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                      >
-                        Copy Link
-                      </button>
-                      <a 
-                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(createdEmployeeInfo.email)}&su=${encodeURIComponent("🔑 Complete Your Claims Guard Corporate Account Setup")}&body=${encodeURIComponent(`Hello ${createdEmployeeInfo.full_name},\n\nYour employee profile has been created by the System Administrator.\n\nUsername: ${createdEmployeeInfo.username}\n\nPlease click the link below to set your permanent corporate password:\n${createdEmployeeInfo.activation_url}\n\nRegards,\nClaims Guard AI System Admin`)}`}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ padding: '4px 10px', fontSize: '11px', background: '#2563eb', color: '#fff', textDecoration: 'none', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
-                      >
-                        <Mail size={12} /> Send via Gmail
-                      </a>
-                    </div>
-                    <small style={{ display: 'block', color: '#15803d' }}>
-                      Assigned Username: <strong>{createdEmployeeInfo.username}</strong> | Recipient: {createdEmployeeInfo.email}
-                    </small>
-                  </div>
-                )}
-                
                 <div className="input-group">
                   <label>Full Name</label>
                   <input 
@@ -2097,7 +2022,7 @@ function App() {
                     {auditLogs.map((log) => (
                       <tr key={log.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{new Date(log.created_at).toLocaleString()}</td>
-                        <td style={{ padding: '8px' }}>{log.user ? `${log.user.full_name} (${log.user.role})` : 'System'}</td>
+                        <td style={{ padding: '8px' }}>{log.user ? `${log.user.full_name} (${log.user.role === 'admin' ? 'Admin' : log.user.role === 'adjuster' ? 'Employee' : 'User'})` : 'System'}</td>
                         <td style={{ padding: '8px', fontWeight: 'bold', color: 'var(--mono-secondary)' }}>{log.action}</td>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>{log.details}</td>
                       </tr>
