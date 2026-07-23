@@ -450,6 +450,8 @@ function App() {
     }
   }
 
+  const [userDirBanner, setUserDirBanner] = useState({ text: '', type: '' });
+
   async function handleDeleteUser(userId, username) {
     if (!confirm(`Are you sure you want to permanently delete account "${username}"?`)) return;
     setError('');
@@ -462,12 +464,12 @@ function App() {
         const resData = await response.json();
         throw new Error(resData.detail || 'Failed to delete user account.');
       }
-      alert(`✅ Account "${username}" deleted successfully.`);
+      setUserDirBanner({ text: `User account "${username}" deleted successfully.`, type: 'success' });
       loadAllUsers();
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
-      alert(`❌ Delete failed: ${e.message}`);
+      setUserDirBanner({ text: `Delete failed: ${e.message}`, type: 'error' });
     }
   }
 
@@ -483,12 +485,11 @@ function App() {
         const resData = await response.json();
         throw new Error(resData.detail || 'Password reset request failed.');
       }
-      const data = await response.json();
-      alert(`✅ Password reset link dispatched for account "${username}". The user can establish a new password via email.`);
+      setUserDirBanner({ text: `Password reset link dispatched for account "${username}". The user can establish a new password via email.`, type: 'success' });
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
-      alert(`❌ Reset Password failed: ${e.message}`);
+      setUserDirBanner({ text: `Reset Password failed: ${e.message}`, type: 'error' });
     }
   }
 
@@ -496,7 +497,7 @@ function App() {
     setError('');
     const targetUser = allUsers.find(u => u.id === userId);
     if (targetUser && (targetUser.username === 'admin' || targetUser.customer_id === 'ADM-SYSTEM')) {
-      alert('❌ Role modification denied: The primary System Administrator account ("admin") role cannot be changed.');
+      setUserDirBanner({ text: 'Role modification denied: The primary System Administrator account ("admin") role cannot be changed.', type: 'error' });
       loadAllUsers();
       return;
     }
@@ -509,12 +510,12 @@ function App() {
         const resData = await response.json();
         throw new Error(resData.detail || 'Role update failed');
       }
-      alert(`✅ User role updated to ${newRole.toUpperCase()} successfully.`);
+      setUserDirBanner({ text: `User role updated to ${newRole.toUpperCase()} successfully.`, type: 'success' });
       loadAllUsers();
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
-      alert(`❌ Role update failed: ${e.message}`);
+      setUserDirBanner({ text: `Role update failed: ${e.message}`, type: 'error' });
       loadAllUsers();
     }
   }
@@ -1968,25 +1969,49 @@ function App() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '16px' }}>
               <div className="panel">
                 <h2>User Roles Directory</h2>
+                {userDirBanner.text && (
+                  <div style={{
+                    padding: '10px 14px',
+                    marginBottom: '14px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    background: userDirBanner.type === 'error' ? '#fef2f2' : '#f0fdf4',
+                    color: userDirBanner.type === 'error' ? '#991b1b' : '#166534',
+                    border: `1px solid ${userDirBanner.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span>{userDirBanner.text}</span>
+                    <button 
+                      type="button"
+                      onClick={() => setUserDirBanner({ text: '', type: '' })}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'inherit', padding: '0 4px' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
                 {/* SECTION 1: System Administrators Directory */}
                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: '#9333ea', marginTop: '1rem', marginBottom: '0.5rem' }}>🛡️ System Administrators Directory</h3>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '1.5rem', tableLayout: 'fixed' }}>
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '15%' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>User ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Username</th>
                       <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '24%' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '13%' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right', width: '16%' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '10%' }}>Staff Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '14%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allUsers.filter(u => u.role === 'admin').map((u) => (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
-                        <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
-                        <td style={{ padding: '8px' }}>{u.username}</td>
-                        <td style={{ padding: '8px' }}>{u.full_name}</td>
+                        <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.customer_id}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px' }}>
                           <select 
@@ -2018,20 +2043,20 @@ function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '1.5rem', tableLayout: 'fixed' }}>
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '15%' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>User ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Username</th>
                       <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '24%' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '13%' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right', width: '16%' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '10%' }}>Staff Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '14%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allUsers.filter(u => u.role === 'adjuster').map((u) => (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
-                        <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
-                        <td style={{ padding: '8px' }}>{u.username}</td>
-                        <td style={{ padding: '8px' }}>{u.full_name}</td>
+                        <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.customer_id}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px' }}>
                           <select 
@@ -2075,20 +2100,20 @@ function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed' }}>
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '15%' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>User ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Username</th>
                       <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '24%' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '13%' }}>Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right', width: '16%' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '10%' }}>Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '14%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {allUsers.filter(u => u.role === 'customer').map((u) => (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
-                        <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
-                        <td style={{ padding: '8px' }}>{u.username}</td>
-                        <td style={{ padding: '8px' }}>{u.full_name}</td>
+                        <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.customer_id}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px' }}>
                           <span style={{ padding: '2px 6px', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: '11px', borderRadius: '3px' }}>
