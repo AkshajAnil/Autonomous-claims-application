@@ -233,6 +233,18 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
     if not user or not verify_password(user_in.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     
+    if user_in.expected_role and user.role != user_in.expected_role:
+        role_labels = {
+            "admin": "Administrator",
+            "adjuster": "Claims Adjuster",
+            "customer": "Policyholder"
+        }
+        actual_label = role_labels.get(user.role, user.role)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Role Mismatch: '{user.username}' is registered as a {actual_label}. Please switch to the {actual_label} login portal tab."
+        )
+
     # Account Deactivation check
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is deactivated. Contact system administrator.")

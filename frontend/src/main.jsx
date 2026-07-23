@@ -40,6 +40,16 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [loginRoleTab, setLoginRoleTab] = useState('customer'); // 'customer', 'adjuster', 'admin'
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
+  function handleRoleTabSwitch(tab) {
+    setLoginRoleTab(tab);
+    setIsLoginMode(true);
+    setAuthError('');
+    setLoginUsername('');
+    setLoginPassword('');
+  }
   
   // Forced password reset state
   const [mustResetPassword, setMustResetPassword] = useState(false);
@@ -514,7 +524,9 @@ function App() {
       
       if (isLoginMode) {
         options.headers = { 'Content-Type': 'application/json' };
-        options.body = JSON.stringify(Object.fromEntries(formData));
+        const payload = Object.fromEntries(formData);
+        payload.expected_role = loginRoleTab;
+        options.body = JSON.stringify(payload);
       } else {
         options.body = formData;
       }
@@ -526,6 +538,8 @@ function App() {
       }
       
       const resData = await response.json();
+      setLoginUsername('');
+      setLoginPassword('');
       if (!isLoginMode) {
         setIsLoginMode(true);
         setAuthError('Registration successful. Please log in.');
@@ -720,7 +734,7 @@ function App() {
             <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', background: 'var(--mono-surface-dark)', padding: '4px', borderRadius: '6px' }}>
               <button 
                 type="button" 
-                onClick={() => { setLoginRoleTab('customer'); setIsLoginMode(true); }}
+                onClick={() => handleRoleTabSwitch('customer')}
                 style={{ 
                   flex: 1, 
                   padding: '8px 4px', 
@@ -738,7 +752,7 @@ function App() {
               </button>
               <button 
                 type="button" 
-                onClick={() => { setLoginRoleTab('adjuster'); setIsLoginMode(true); }}
+                onClick={() => handleRoleTabSwitch('adjuster')}
                 style={{ 
                   flex: 1, 
                   padding: '8px 4px', 
@@ -756,7 +770,7 @@ function App() {
               </button>
               <button 
                 type="button" 
-                onClick={() => { setLoginRoleTab('admin'); setIsLoginMode(true); }}
+                onClick={() => handleRoleTabSwitch('admin')}
                 style={{ 
                   flex: 1, 
                   padding: '8px 4px', 
@@ -775,7 +789,7 @@ function App() {
             </div>
           )}
           
-          <form className="panel claim-form" onSubmit={handleAuth}>
+          <form className="panel claim-form" key={loginRoleTab + '-' + (isLoginMode ? 'login' : 'register')} onSubmit={handleAuth}>
             <h2>
               {isLoginMode 
                 ? (loginRoleTab === 'adjuster' ? '⚖️ Claims Adjuster Login Portal' : loginRoleTab === 'admin' ? '🛡️ Administrator Executive Portal' : '👥 Policyholder Customer Login')
@@ -784,10 +798,21 @@ function App() {
             </h2>
             {authError && <div className="error-banner">{authError}</div>}
             
+            {isLoginMode && loginRoleTab === 'admin' && (
+              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '10px 14px', borderRadius: '6px', fontSize: '12px', color: '#334155', marginBottom: '14px' }}>
+                🔐 <strong>Default Administrator Credentials:</strong>
+                <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
+                  Username: <code style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>admin</code> &nbsp;|&nbsp; Password: <code style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>1234</code>
+                </div>
+              </div>
+            )}
+            
             <div className="input-group">
               <label>Username</label>
               <input 
                 name="username" 
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder={
                   isLoginMode 
                     ? (loginRoleTab === 'adjuster' ? 'e.g. adjuster_user' : loginRoleTab === 'admin' ? 'e.g. admin' : 'Enter username') 
@@ -816,7 +841,14 @@ function App() {
             
             <div className="input-group">
               <label>Password</label>
-              <input name="password" type="password" placeholder="••••••••" required />
+              <input 
+                name="password" 
+                type="password" 
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="••••••••" 
+                required 
+              />
             </div>
             
             <button type="submit" disabled={isAuthSubmitting}>
@@ -836,7 +868,7 @@ function App() {
             
             {loginRoleTab === 'customer' && (
               <p style={{marginTop: '0.6rem', textAlign: 'center', fontSize: '13px'}}>
-                <a href="#" onClick={(e) => { e.preventDefault(); setIsLoginMode(!isLoginMode); }}>
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsLoginMode(!isLoginMode); setAuthError(''); setLoginUsername(''); setLoginPassword(''); }}>
                   {isLoginMode ? 'New Customer? Register Profile' : 'Already registered? Customer Login'}
                 </a>
               </p>

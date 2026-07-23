@@ -152,6 +152,7 @@ class AgentDecision(BaseModel):
 class UserCreate(BaseModel):
     username: str
     password: str
+    expected_role: str | None = None
 
 
 class PredictRequest(BaseModel):
