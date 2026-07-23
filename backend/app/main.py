@@ -127,15 +127,24 @@ def auto_assign_claims(db: Session):
 
 def cleanup_db_emails(db: Session):
     """
-    Cleans up any historical double-domain emails stored in database.
+    Cleans up any historical double-domain emails stored in database safely.
     """
-    users = db.query(User).all()
-    for u in users:
-        if u.email and "@" in u.email:
-            parts = u.email.split("@")
-            if len(parts) > 2:
-                u.email = f"{parts[0]}@{parts[1]}"
-    db.commit()
+    try:
+        users = db.query(User).all()
+        for u in users:
+            if u.email and "@" in u.email:
+                parts = u.email.split("@")
+                if len(parts) > 2:
+                    clean = f"{parts[0]}@{parts[1]}"
+                    existing = db.query(User).filter(User.email == clean, User.id != u.id).first()
+                    if not existing:
+                        u.email = clean
+                    else:
+                        u.email = f"{u.username}.dup@{parts[1]}"
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Warning during email cleanup: {e}")
 
 
 @app.on_event("startup")
