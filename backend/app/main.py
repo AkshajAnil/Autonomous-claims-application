@@ -317,7 +317,10 @@ async def register(
 
 @app.post("/login")
 def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == user_in.username).first()
+    clean_identifier = user_in.username.strip().lower() if user_in.username else ""
+    user = db.query(User).filter(
+        (User.username.ilike(clean_identifier)) | (User.email.ilike(clean_identifier))
+    ).first()
     if not user or not verify_password(user_in.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     

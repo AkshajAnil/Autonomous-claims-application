@@ -603,9 +603,11 @@ function App() {
       
       if (isLoginMode) {
         options.headers = { 'Content-Type': 'application/json' };
-        const payload = Object.fromEntries(formData);
-        payload.expected_role = loginRoleTab;
-        options.body = JSON.stringify(payload);
+        options.body = JSON.stringify({
+          username: loginUsername.trim(),
+          password: loginPassword,
+          expected_role: loginRoleTab
+        });
       } else {
         options.body = formData;
       }
