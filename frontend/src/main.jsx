@@ -67,6 +67,7 @@ function App() {
   const [filterCustId, setFilterCustId] = useState('');
   const [filterClaimantName, setFilterClaimantName] = useState('');
   const [filterClaimId, setFilterClaimId] = useState('');
+  const [filterAdjusterId, setFilterAdjusterId] = useState('');
   const [showFileClaim, setShowFileClaim] = useState(false);
   const [registrationFileName, setRegistrationFileName] = useState('');
   const [claimFileNames, setClaimFileNames] = useState([]);
@@ -116,6 +117,9 @@ function App() {
 
   const filteredAdminClaims = useMemo(() => {
     return claims.filter((c) => {
+      if (filterAdjusterId) {
+        if (c.assigned_adjuster_id !== filterAdjusterId && c.assigned_adjuster?.id !== filterAdjusterId) return false;
+      }
       if (filterCustId.trim()) {
         const qCust = filterCustId.toLowerCase().trim();
         const userCustId = c.user?.customer_id?.toLowerCase() || '';
@@ -140,7 +144,7 @@ function App() {
       }
       return true;
     });
-  }, [claims, filterCustId, filterClaimantName, filterClaimId]);
+  }, [claims, filterAdjusterId, filterCustId, filterClaimantName, filterClaimId]);
 
   // Activation / Setup Token Link State
   const [tokenFromUrl, setTokenFromUrl] = useState('');
@@ -1783,12 +1787,22 @@ function App() {
                     onChange={(e) => setFilterClaimId(e.target.value)}
                     style={{ padding: '5px 8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}
                   />
-                  {(filterCustId || filterClaimantName || filterClaimId) && (
+                  <select 
+                    value={filterAdjusterId}
+                    onChange={(e) => setFilterAdjusterId(e.target.value)}
+                    style={{ padding: '5px 8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}
+                  >
+                    <option value="">-- All Assigned Adjusters --</option>
+                    {allUsers.filter(u => u.role === 'adjuster').map(adj => (
+                      <option key={adj.id} value={adj.id}>⚖️ {adj.full_name} ({adj.username})</option>
+                    ))}
+                  </select>
+                  {(filterCustId || filterClaimantName || filterClaimId || filterAdjusterId) && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
                       <span style={{ fontSize: '10px', color: '#64748b' }}>Found {filteredAdminClaims.length} matching claim(s)</span>
                       <button 
                         type="button" 
-                        onClick={() => { setFilterCustId(''); setFilterClaimantName(''); setFilterClaimId(''); }}
+                        onClick={() => { setFilterCustId(''); setFilterClaimantName(''); setFilterClaimId(''); setFilterAdjusterId(''); }}
                         style={{ fontSize: '10px', padding: '2px 6px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '3px', cursor: 'pointer' }}
                       >
                         Clear Filters
@@ -1800,7 +1814,7 @@ function App() {
                 <div className="claims-list-scroll">
                   {filteredAdminClaims.length === 0 && (
                     <p className="muted" style={{ fontSize: '12px', padding: '8px 0' }}>
-                      {(filterCustId || filterClaimantName || filterClaimId) ? 'No claims matching applied filters.' : 'No claims registered.'}
+                      {(filterCustId || filterClaimantName || filterClaimId || filterAdjusterId) ? 'No claims matching applied filters.' : 'No claims registered.'}
                     </p>
                   )}
                   {filteredAdminClaims.map((c) => (
@@ -1968,16 +1982,6 @@ function App() {
                         </td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                            <button 
-                              onClick={() => {
-                                setFilterCustId('');
-                                setFilterClaimantName(u.full_name || u.username || '');
-                                setCurrentTab('claims');
-                              }}
-                              style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
-                            >
-                              Claims
-                            </button>
                             <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
                               Delete
                             </button>
@@ -2025,8 +2029,10 @@ function App() {
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                             <button 
                               onClick={() => {
+                                setFilterAdjusterId(u.id);
                                 setFilterCustId('');
-                                setFilterClaimantName(u.full_name || u.username || '');
+                                setFilterClaimantName('');
+                                setFilterClaimId('');
                                 setCurrentTab('claims');
                               }}
                               style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
