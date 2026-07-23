@@ -583,20 +583,37 @@ def adjudicate_claim(
     if current_user.role == "adjuster" and claim.assigned_adjuster_id != current_user.id:
         raise HTTPException(status_code=403, detail="Claim is not assigned to you.")
     old_status = claim.status
+    meta = dict(claim.verification_metadata or {})
     if req.action == "APPROVE":
         claim.status = ClaimStatus.approved.value
         claim.decision = "Approved (Adjuster Override)"
-        claim.decision_reason = "Manual Adjuster Override"
+        claim.decision_reason = f"Manual Adjuster Override: {req.notes}"
+        meta["next_actions"] = [
+            "Disburse claim payout to policyholder account",
+            "Dispatch formal approval email notice",
+            "Archive claim file in audit repository"
+        ]
     elif req.action == "REJECT":
         claim.status = ClaimStatus.rejected.value
         claim.decision = "Rejected (Adjuster Override)"
-        claim.decision_reason = "Manual Adjuster Override"
+        claim.decision_reason = f"Manual Adjuster Override: {req.notes}"
+        meta["next_actions"] = [
+            "Issue formal denial letter explaining policy grounds",
+            "Log rejection rationale in compliance database",
+            "Close active claim file"
+        ]
     elif req.action == "REQUEST_DOCUMENTS":
         claim.status = ClaimStatus.under_review.value
         claim.decision = "Under Review (Documents Requested)"
-        claim.decision_reason = "Manual Adjuster Override"
+        claim.decision_reason = f"Manual Adjuster Override: {req.notes}"
+        meta["next_actions"] = [
+            "Request supplemental documentation / receipts from policyholder",
+            "Schedule secondary adjuster review upon receipt of documents"
+        ]
     else:
         raise HTTPException(status_code=400, detail="Invalid adjudication action.")
+
+    claim.verification_metadata = meta
 
     claim.reviewed_by_id = current_user.id
     claim.reviewed_at = datetime.datetime.utcnow()

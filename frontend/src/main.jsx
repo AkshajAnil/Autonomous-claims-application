@@ -1456,18 +1456,10 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Reason Code Alert */}
-                    {selected.verification_metadata?.reason_code && (
-                      <div style={{ marginTop: '10px', padding: '8px 12px', background: 'rgba(0,0,0,0.04)', borderLeft: '4px solid var(--mono-primary)', fontSize: '12px' }}>
-                        <strong>Reason Code:</strong> <span style={{ background: '#e0e7ff', color: '#3730a3', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>{selected.verification_metadata.reason_code}</span> — {selected.verification_metadata.reason}
-                      </div>
-                    )}
-
                     <div style={{ marginTop: '12px', fontSize: '13px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <div><strong>Policy #:</strong> {selected.policy_number}</div>
                       <div><strong>Incident Date:</strong> {selected.incident_date ? new Date(selected.incident_date).toLocaleDateString() : '-'}</div>
                       <div><strong>Incident Location:</strong> {selected.incident_location}</div>
-                      <div><strong>Current Workflow:</strong> {selected.status}</div>
                     </div>
 
                     {selected.description && (
@@ -1490,19 +1482,41 @@ function App() {
                     </div>
                   )}
 
-                  {/* Actionable Next Actions Checklist Card */}
-                  {selected.verification_metadata?.next_actions && selected.verification_metadata.next_actions.length > 0 && (
-                    <div className="panel" style={{ background: '#faf5ff', border: '1px solid #e9d5ff' }}>
-                      <h3 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#6b21a8' }}>📋 Recommended Next Actions</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {selected.verification_metadata.next_actions.map((act, idx) => (
-                          <div key={idx} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#581c87', fontWeight: '500' }}>
-                            <span style={{ color: '#9333ea', fontWeight: 'bold' }}>✓</span> {act}
-                          </div>
-                        ))}
+                  {/* Actionable Next Actions Checklist Card (Dynamic based on Status) */}
+                  {(() => {
+                    let nextActions = selected.verification_metadata?.next_actions;
+                    if (selected.status === 'APPROVED') {
+                      nextActions = [
+                        "Disburse claim payout to policyholder account",
+                        "Dispatch formal approval email notice",
+                        "Archive claim file in audit repository"
+                      ];
+                    } else if (selected.status === 'REJECTED') {
+                      nextActions = [
+                        "Issue formal denial letter explaining policy grounds",
+                        "Log rejection rationale in compliance database",
+                        "Close active claim file"
+                      ];
+                    } else if (selected.status === 'UNDER_REVIEW') {
+                      nextActions = [
+                        "Request supplemental documentation / receipts from policyholder",
+                        "Schedule secondary adjuster review upon receipt of documents"
+                      ];
+                    }
+
+                    return nextActions && nextActions.length > 0 ? (
+                      <div className="panel" style={{ background: '#faf5ff', border: '1px solid #e9d5ff' }}>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#6b21a8' }}>📋 Recommended Next Actions</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {nextActions.map((act, idx) => (
+                            <div key={idx} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#581c87', fontWeight: '500' }}>
+                              <span style={{ color: '#9333ea', fontWeight: 'bold' }}>✓</span> {act}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ) : null;
+                  })()}
 
                   {/* Top Positive & Top Negative Rules Cards */}
                   {selected.verification_metadata?.top_positive && (
@@ -1571,40 +1585,51 @@ function App() {
                     </div>
                   )}
 
-                  {/* Triggered Rules Audit Table */}
-                  {selected.verification_metadata?.triggered_rules && (
-                    <div className="panel">
-                      <h3>📊 Risk Scoring Factors</h3>
-                      <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>Key factors that influenced the trust score evaluation.</p>
-                      <div style={{ marginTop: '8px', overflowX: 'auto' }}>
-                        <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                              <th style={{ padding: '6px' }}>Category</th>
-                              <th style={{ padding: '6px' }}>Verification Factor</th>
-                              <th style={{ padding: '6px' }}>Score Impact</th>
-                              <th style={{ padding: '6px' }}>Details</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {selected.verification_metadata.triggered_rules.map((rule, idx) => {
-                              const isPos = rule.score > 0;
-                              return (
-                                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                  <td style={{ padding: '6px', fontWeight: 'bold' }}>{rule.category}</td>
-                                  <td style={{ padding: '6px' }}>{rule.rule}</td>
-                                  <td style={{ padding: '6px', fontWeight: 'bold', color: isPos ? '#16a34a' : '#dc2626' }}>
-                                    {isPos ? `+${rule.score}` : rule.score}
-                                  </td>
-                                  <td style={{ padding: '6px', color: '#475569' }}>{rule.description}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                  {/* Triggered Rules Audit Table (Strictly Synchronized with Automated Checks Status) */}
+                  {selected.verification_metadata?.triggered_rules && (() => {
+                    const vStatus = selected.verification_metadata.verification_status || {};
+                    const validRules = selected.verification_metadata.triggered_rules.filter(rule => {
+                      if (rule.category === 'Identity' && vStatus.identity?.status !== 'SUCCESS') return false;
+                      if (rule.category === 'Weather' && vStatus.weather?.status !== 'SUCCESS') return false;
+                      if (rule.category === 'News' && vStatus.news?.status !== 'SUCCESS') return false;
+                      if (rule.category === 'Location' && vStatus.location?.status !== 'SUCCESS') return false;
+                      return true;
+                    });
+
+                    return (
+                      <div className="panel">
+                        <h3>📊 Risk Scoring Factors</h3>
+                        <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '10px' }}>Key factors that influenced the trust score evaluation.</p>
+                        <div style={{ marginTop: '8px', overflowX: 'auto' }}>
+                          <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
+                            <thead>
+                              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                                <th style={{ padding: '6px' }}>Category</th>
+                                <th style={{ padding: '6px' }}>Verification Factor</th>
+                                <th style={{ padding: '6px' }}>Score Impact</th>
+                                <th style={{ padding: '6px' }}>Details</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {validRules.map((rule, idx) => {
+                                const isPos = rule.score > 0;
+                                return (
+                                  <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '6px', fontWeight: 'bold' }}>{rule.category}</td>
+                                    <td style={{ padding: '6px' }}>{rule.rule}</td>
+                                    <td style={{ padding: '6px', fontWeight: 'bold', color: isPos ? '#16a34a' : '#dc2626' }}>
+                                      {isPos ? `+${rule.score}` : rule.score}
+                                    </td>
+                                    <td style={{ padding: '6px', color: '#475569' }}>{rule.description}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* AI Evidence Summary */}
                   {selected.verification_metadata?.evidence && (() => {
