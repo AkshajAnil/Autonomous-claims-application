@@ -7,7 +7,7 @@ from app.config import get_settings
 def send_activation_email(to_email: str, full_name: str, username: str, activation_url: str) -> bool:
     settings = get_settings()
     
-    subject = "🔑 Complete Your Claims Guard AI Corporate Account Setup"
+    subject = "Complete Your Claims Guard AI Corporate Account Setup"
     body_html = f"""
     <html>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b;">
