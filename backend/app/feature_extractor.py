@@ -69,11 +69,15 @@ class UniversalFeatureExtractor:
         policy_limit = 100000.0 # Default max limit
         amount_ratio = round(req_amount / policy_limit, 4)
 
+        # Identity Check Signals
+        id_status = verification_statuses.get("identity", {}).get("status")
+        is_id_ok = (id_status == "SUCCESS") or (claim.user and claim.user.is_identity_verified if id_status != "FAILED" and id_status != "SKIPPED" else False)
+
         return {
             # Identity Features
-            "identity_verified": {"value": True, "source": "IdentityAPI", "confidence": 0.95},
-            "face_match": {"value": True, "source": "BiometricAPI", "confidence": 0.95},
-            "liveness_passed": {"value": True, "source": "LivenessCheck", "confidence": 0.95},
+            "identity_verified": {"value": is_id_ok, "source": "IdentityAPI", "confidence": 0.95 if is_id_ok else 0.0},
+            "face_match": {"value": is_id_ok, "source": "BiometricAPI", "confidence": 0.95 if is_id_ok else 0.0},
+            "liveness_passed": {"value": is_id_ok, "source": "LivenessCheck", "confidence": 0.95 if is_id_ok else 0.0},
 
             # Policy Features
             "policy_active": {"value": True, "source": "PolicyDB", "confidence": 1.0},

@@ -120,7 +120,8 @@ function App() {
         const qCust = filterCustId.toLowerCase().trim();
         const userCustId = c.user?.customer_id?.toLowerCase() || '';
         const userId = c.user_id?.toLowerCase() || '';
-        if (!userCustId.includes(qCust) && !userId.includes(qCust)) return false;
+        const adjCustId = c.assigned_adjuster?.customer_id?.toLowerCase() || '';
+        if (!userCustId.includes(qCust) && !userId.includes(qCust) && !adjCustId.includes(qCust)) return false;
       }
       if (filterClaimantName.trim()) {
         const qName = filterClaimantName.toLowerCase().trim();
@@ -1416,9 +1417,18 @@ function App() {
                         </strong>
                       </div>
                       <div>
-                        <span>Decision Tier</span>
-                        <strong style={{ fontSize: '11px', color: 'var(--mono-accent)' }}>
-                          {selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' ? '⏳ Investigating...' : (selected.verification_metadata?.decision || selected.status)}
+                        <span>Workflow Status</span>
+                        <strong style={{ 
+                          fontSize: '11px', 
+                          padding: '3px 8px', 
+                          borderRadius: '4px',
+                          display: 'inline-block',
+                          marginTop: '4px',
+                          textTransform: 'uppercase',
+                          background: selected.status === 'APPROVED' ? '#dcfce7' : selected.status === 'REJECTED' ? '#fee2e2' : selected.status === 'PROCESSING' ? '#e0e7ff' : '#fef3c7',
+                          color: selected.status === 'APPROVED' ? '#166534' : selected.status === 'REJECTED' ? '#991b1b' : selected.status === 'PROCESSING' ? '#3730a3' : '#92400e'
+                        }}>
+                          {selected.status}
                         </strong>
                       </div>
                     </div>
@@ -1800,9 +1810,19 @@ function App() {
                       onClick={() => setSelectedId(c.id)}
                       style={{ cursor: 'pointer' }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '13px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '13px', alignItems: 'center' }}>
                         <span>{c.claimant_name}</span>
-                        <span>{c.status}</span>
+                        <span style={{ 
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          textTransform: 'uppercase',
+                          background: c.status === 'APPROVED' ? '#dcfce7' : c.status === 'REJECTED' ? '#fee2e2' : c.status === 'PROCESSING' ? '#e0e7ff' : '#fef3c7',
+                          color: c.status === 'APPROVED' ? '#166534' : c.status === 'REJECTED' ? '#991b1b' : c.status === 'PROCESSING' ? '#3730a3' : '#92400e'
+                        }}>
+                          {c.status}
+                        </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '11px', marginTop: '4px', opacity: 0.85 }}>
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px' }}>ID: {c.id.slice(0, 8)}...</span>
@@ -1950,7 +1970,7 @@ function App() {
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                             <button 
                               onClick={() => {
-                                setFilterCustId(u.customer_id || '');
+                                setFilterCustId('');
                                 setFilterClaimantName(u.full_name || u.username || '');
                                 setCurrentTab('claims');
                               }}
@@ -2005,7 +2025,7 @@ function App() {
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                             <button 
                               onClick={() => {
-                                setFilterCustId(u.customer_id || '');
+                                setFilterCustId('');
                                 setFilterClaimantName(u.full_name || u.username || '');
                                 setCurrentTab('claims');
                               }}
