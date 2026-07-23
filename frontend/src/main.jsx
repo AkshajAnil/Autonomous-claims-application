@@ -57,6 +57,15 @@ function App() {
     setLoginPassword('');
   }
   
+  // Active Role State for Multi-Role Employees
+  const [activeRole, setActiveRole] = useState('customer');
+
+  useEffect(() => {
+    if (user) {
+      setActiveRole(user.role || (user.roles && user.roles[0]) || 'customer');
+    }
+  }, [user]);
+
   // Forced password reset state
   const [mustResetPassword, setMustResetPassword] = useState(false);
   const [resetPwdValue, setResetPwdValue] = useState('');
@@ -87,15 +96,19 @@ function App() {
   const [empRole, setEmpRole] = useState('adjuster');
   const [empSuccessMsg, setEmpSuccessMsg] = useState('');
 
+  function handleEmpEmailChange(val) {
+    setEmpEmail(val);
+    if (val && val.includes('@')) {
+      const prefix = val.split('@')[0].toLowerCase().replace(/[^a-zA-Z0-9._-]/g, '');
+      setEmpUsername(prefix);
+    }
+  }
+
   function handleEmpNameChange(val) {
     setEmpName(val);
-    const parts = val.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      const firstTwo = parts[0].slice(0, 2).toLowerCase();
-      const lastClean = parts.slice(1).join('').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      setEmpUsername(`${firstTwo}${lastClean}`);
-    } else if (parts.length === 1 && parts[0]) {
-      setEmpUsername(parts[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase());
+    if (!empEmail && val.trim()) {
+      const clean = val.trim().toLowerCase().replace(/\s+/g, '.').replace(/[^a-zA-Z0-9.]/g, '');
+      setEmpUsername(clean);
     }
   }
   
@@ -763,16 +776,16 @@ function App() {
             <p className="brand-sub">Enterprise Insurance Verification Platform</p>
           </div>
 
-          {/* Dedicated Login Portal Selection Tabs */}
+          {/* Dedicated Production Architecture Portals */}
           {isLoginMode && (
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', background: 'var(--mono-surface-dark)', padding: '4px', borderRadius: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', background: 'var(--mono-surface-dark)', padding: '4px', borderRadius: '6px' }}>
               <button 
                 type="button" 
                 onClick={() => handleRoleTabSwitch('customer')}
                 style={{ 
                   flex: 1, 
-                  padding: '8px 4px', 
-                  fontSize: '11px', 
+                  padding: '10px 4px', 
+                  fontSize: '12px', 
                   fontWeight: 'bold', 
                   border: 'none', 
                   borderRadius: '4px',
@@ -782,43 +795,25 @@ function App() {
                   boxShadow: loginRoleTab === 'customer' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                 }}
               >
-                👥 Policyholder
+                👥 Customer Portal
               </button>
               <button 
                 type="button" 
-                onClick={() => handleRoleTabSwitch('adjuster')}
+                onClick={() => handleRoleTabSwitch('employee')}
                 style={{ 
                   flex: 1, 
-                  padding: '8px 4px', 
-                  fontSize: '11px', 
+                  padding: '10px 4px', 
+                  fontSize: '12px', 
                   fontWeight: 'bold', 
                   border: 'none', 
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  background: loginRoleTab === 'adjuster' ? 'var(--mono-surface)' : 'transparent',
-                  color: loginRoleTab === 'adjuster' ? 'var(--mono-text)' : 'var(--mono-text-light)',
-                  boxShadow: loginRoleTab === 'adjuster' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                  background: loginRoleTab === 'employee' ? 'var(--mono-surface)' : 'transparent',
+                  color: loginRoleTab === 'employee' ? 'var(--mono-text)' : 'var(--mono-text-light)',
+                  boxShadow: loginRoleTab === 'employee' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                 }}
               >
-                ⚖️ Adjuster
-              </button>
-              <button 
-                type="button" 
-                onClick={() => handleRoleTabSwitch('admin')}
-                style={{ 
-                  flex: 1, 
-                  padding: '8px 4px', 
-                  fontSize: '11px', 
-                  fontWeight: 'bold', 
-                  border: 'none', 
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  background: loginRoleTab === 'admin' ? 'var(--mono-surface)' : 'transparent',
-                  color: loginRoleTab === 'admin' ? 'var(--mono-text)' : 'var(--mono-text-light)',
-                  boxShadow: loginRoleTab === 'admin' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                }}
-              >
-                🛡️ Admin
+                💼 Employee Portal
               </button>
             </div>
           )}
@@ -826,7 +821,7 @@ function App() {
           <form className="panel claim-form" key={loginRoleTab + '-' + (isLoginMode ? 'login' : 'register')} onSubmit={handleAuth} autoComplete="off">
             <h2>
               {isLoginMode 
-                ? (loginRoleTab === 'adjuster' ? '⚖️ Claims Adjuster Login Portal' : loginRoleTab === 'admin' ? '🛡️ Administrator Executive Portal' : '👥 Policyholder Customer Login')
+                ? (loginRoleTab === 'employee' ? '💼 Enterprise Employee Portal' : '👥 Policyholder Customer Login')
                 : 'Register Customer Profile'
               }
             </h2>
@@ -834,7 +829,7 @@ function App() {
             
             
             <div className="input-group">
-              <label>Username</label>
+              <label>{loginRoleTab === 'employee' ? 'Company Email / Username' : 'Registered Email / Username'}</label>
               <input 
                 name="username" 
                 value={loginUsername}
@@ -842,8 +837,8 @@ function App() {
                 autoComplete="off"
                 placeholder={
                   isLoginMode 
-                    ? (loginRoleTab === 'adjuster' ? 'e.g. adjuster_user' : loginRoleTab === 'admin' ? 'e.g. admin' : 'Enter username') 
-                    : 'Enter username'
+                    ? (loginRoleTab === 'employee' ? 'e.g. employee@company.com' : 'e.g. customer@gmail.com') 
+                    : 'Enter username or email'
                 } 
                 required 
               />
@@ -882,7 +877,7 @@ function App() {
             <button type="submit" disabled={isAuthSubmitting}>
               {isAuthSubmitting 
                 ? (isLoginMode ? 'Establishing Session...' : 'Verifying Identity PDF (please wait)...') 
-                : (isLoginMode ? `Login as ${loginRoleTab.toUpperCase()}` : 'Register Customer Profile')
+                : (isLoginMode ? `Login to ${loginRoleTab === 'employee' ? 'Employee Portal' : 'Customer Portal'}` : 'Register Customer Profile')
               }
             </button>
             
@@ -923,7 +918,40 @@ function App() {
             <ShieldCheck size={28} style={{ color: 'var(--mono-primary)' }} />
             <h1 style={{ fontSize: '24px' }}>Claims Guard terminal</h1>
           </div>
-          <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>ROLE: {user.role.toUpperCase()}</span>
+          {user && user.role !== 'customer' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+              <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>EMPLOYEE IDENTITY: {user.full_name || user.username}</span>
+              {(user.roles && user.roles.length > 1) ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                  <span style={{ fontSize: '11px', color: '#0f172a', fontWeight: 'bold' }}>Current Role:</span>
+                  <select 
+                    value={activeRole} 
+                    onChange={(e) => setActiveRole(e.target.value)}
+                    style={{
+                      padding: '2px 6px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      borderRadius: '4px',
+                      border: '1px solid #94a3b8',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {user.roles.map(r => (
+                      <option key={r} value={r}>
+                        {r === 'admin' ? '🛡️ Administrator' : r === 'adjuster' ? '⚖️ Adjuster' : r.toUpperCase()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>ROLE: {activeRole.toUpperCase()}</span>
+              )}
+            </div>
+          ) : (
+            <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>ROLE: POLICYHOLDER CUSTOMER</span>
+          )}
         </div>
         <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
           <div className="status-pill" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '6px 12px' }}>

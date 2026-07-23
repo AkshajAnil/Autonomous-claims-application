@@ -113,7 +113,12 @@ class User(Base):
     reset_token: Mapped[str | None] = mapped_column(String(120), nullable=True)
     reset_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    @property
+    def roles_list(self) -> list[str]:
+        if not self.role:
+            return ["customer"]
+        parts = [r.strip().lower() for r in self.role.split(",") if r.strip()]
+        return parts if parts else ["customer"]
 
     claims: Mapped[list[Claim]] = relationship(
         back_populates="user", 

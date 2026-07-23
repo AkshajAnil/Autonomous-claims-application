@@ -320,33 +320,19 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     
     if user_in.expected_role:
-        # Primary admin and staff users (Admins & Adjusters) can log in under staff tabs
-        if user.username == "admin" or user.customer_id == "ADM-SYSTEM":
-            if user.role != "admin":
-                user.role = "admin"
-                db.commit()
-        elif user_in.expected_role in ("admin", "adjuster") and user.role in ("admin", "adjuster"):
-            pass
-        elif user_in.expected_role == "customer" and user.role == "customer":
-            pass
-        elif user_in.expected_role == "customer":
-            pass
-        else:
-            role_labels = {
-                "admin": "Administrator",
-                "adjuster": "Claims Adjuster",
-                "customer": "Policyholder"
-            }
-            tab_labels = {
-                "admin": "Administrator Executive",
-                "adjuster": "Claims Adjuster",
-                "customer": "Policyholder Portal"
-            }
-            actual_label = role_labels.get(user.role, user.role.capitalize())
-            correct_tab = tab_labels.get(user.role, "correct")
+        portal = user_in.expected_role.lower()
+        is_customer = "customer" in user.roles_list
+        is_employee = any(r in ("adjuster", "admin") for r in user.roles_list) or user.role != "customer"
+        
+        if portal == "customer" and not is_customer and is_employee:
             raise HTTPException(
                 status_code=400,
-                detail=f"Role Mismatch: '{user.username}' is registered as a {actual_label}. Please switch to the {correct_tab} login portal tab."
+                detail="Role Mismatch: Internal employees must log in through the Employee Portal."
+            )
+        elif portal in ("employee", "adjuster", "admin") and not is_employee and is_customer:
+            raise HTTPException(
+                status_code=400,
+                detail="Role Mismatch: Policyholders must log in through the Customer Portal."
             )
 
     # Account Deactivation check
@@ -363,21 +349,24 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
     )
     
     # Log Audit: Role-Specific Login
-    role_label = "Admin" if user.role == "admin" else ("Employee" if user.role == "adjuster" else "User")
+    role_label = "Admin" if "admin" in user.roles_list else ("Employee" if "adjuster" in user.roles_list else "User")
     log_audit(db, user.id, f"{role_label} Login", {"username": user.username, "role": user.role})
     
+    user.roles = user.roles_list
     # Check if forced password reset is active
     if user.must_change_password:
         return {
             "message": "Password change required on first login.", 
             "must_change_password": True,
             "role": user.role,
+            "roles": user.roles_list,
             "full_name": user.full_name
         }
         
     return {
         "message": "Logged in successfully",
         "role": user.role,
+        "roles": user.roles_list,
         "full_name": user.full_name
     }
 
@@ -394,7 +383,7 @@ def change_password(req: PasswordChangeRequest, current_user: User = Depends(get
 @app.post("/forgot-password")
 def forgot_password(req: SelfResetPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     clean_email = req.email.strip().lower()
-    generic_msg = "If an account exists for this email, a password reset link has been sent."
+    generic_msg = "Password reset link has been dispatched to your registered email address."
     
     user = db.query(User).filter(User.email == clean_email).first()
     if not user:
@@ -428,13 +417,14 @@ def forgot_password(req: SelfResetPasswordRequest, background_tasks: BackgroundT
 def logout(response: Response, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     logout_user(current_user.id)
     response.delete_cookie("access_token")
-    role_label = "Admin" if current_user.role == "admin" else ("Employee" if current_user.role == "adjuster" else "User")
+    role_label = "Admin" if "admin" in current_user.roles_list else ("Employee" if "adjuster" in current_user.roles_list else "User")
     log_audit(db, current_user.id, f"{role_label} Logout", {"username": current_user.username, "role": current_user.role})
     return {"message": "Logged out successfully"}
 
 
 @app.get("/me", response_model=UserOut)
 def read_users_me(current_user: User = Depends(get_current_user)):
+    current_user.roles = current_user.roles_list
     return current_user
 
 
@@ -677,9 +667,12 @@ def assign_claim(
 
 @app.get("/admin/users", response_model=List[UserOut])
 def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if "admin" not in current_user.roles_list and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only Admins can access user directories.")
-    return db.query(User).order_by(User.created_at.desc()).all()
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    for u in users:
+        u.roles = u.roles_list
+    return users
 
 
 from app.email_service import send_activation_email
@@ -692,23 +685,20 @@ def create_employee(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if "admin" not in current_user.roles_list and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Only Admins can create employee profiles.")
         
-    if req.role not in {"adjuster", "admin"}:
-        raise HTTPException(status_code=400, detail="Invalid employee role. Must be 'adjuster' or 'admin'.")
+    if req.role not in {"adjuster", "admin", "adjuster,admin"}:
+        raise HTTPException(status_code=400, detail="Invalid employee role.")
         
-    # Set Username: explicitly specified by Admin or auto-generated (first 2 letters + last name)
+    # Set Username: explicitly specified by Admin or auto-generated from email prefix
     if req.username and req.username.strip():
         username = req.username.strip().lower()
         if db.query(User).filter(User.username == username).first():
             raise HTTPException(status_code=400, detail=f"Username '{username}' is already taken.")
     else:
-        name_parts = req.full_name.strip().split()
-        if len(name_parts) >= 2:
-            first_two = name_parts[0][:2].lower()
-            last_clean = re.sub(r'[^a-zA-Z0-9]', '', "".join(name_parts[1:])).lower()
-            base_username = f"{first_two}{last_clean}"
+        if req.email and "@" in req.email:
+            base_username = req.email.split("@")[0].lower()
         else:
             base_username = re.sub(r'[^a-zA-Z0-9]', '', req.full_name).lower()
             

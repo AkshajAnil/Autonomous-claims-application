@@ -28,6 +28,7 @@ class UserOut(BaseModel):
     username: str
     customer_id: str
     role: str
+    roles: list[str] = []
     full_name: str
     is_identity_verified: bool
     is_active: bool
@@ -105,6 +106,7 @@ class ClaimOut(BaseModel):
     reviewed_at: datetime | None = None
     reviewer_notes: str | None = None
     reviewed_by_user: UserOut | None = None
+    assigned_adjuster: UserOut | None = None
 
     user_id: str | None
     created_at: datetime
