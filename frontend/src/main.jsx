@@ -112,6 +112,15 @@ function App() {
     }
   }
   
+  // Edit Staff Role Modal State
+  const [editingRoleUser, setEditingRoleUser] = useState(null);
+  const [selectedRoleForUser, setSelectedRoleForUser] = useState('adjuster');
+
+  function openEditRoleModal(u) {
+    setEditingRoleUser(u);
+    setSelectedRoleForUser(u.role || 'adjuster');
+  }
+
   // Password Reset Alert Modal
   const [resetAlertMsg, setResetAlertMsg] = useState('');
 
@@ -2076,21 +2085,31 @@ function App() {
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px', overflow: 'hidden' }}>
-                          <select 
-                            value={u.role}
-                            onChange={(e) => handleUserRoleUpdate(u.id, e.target.value)}
-                            style={{ width: '100%', maxWidth: '85px', padding: '2px 4px', fontSize: '11px', fontWeight: 'bold' }}
-                          >
-                            <option value="admin">ADMIN</option>
-                            <option value="adjuster">ADJUSTER</option>
-                          </select>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map(r => (
+                              <span key={r} style={{
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                background: r === 'admin' ? '#f3e8ff' : '#dbeafe',
+                                color: r === 'admin' ? '#6b21a8' : '#1e40af',
+                                border: `1px solid ${r === 'admin' ? '#d8b4fe' : '#93c5fd'}`
+                              }}>
+                                {r === 'admin' ? '🛡️ ADMIN' : '⚖️ ADJUSTER'}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            <button onClick={() => openEditRoleModal(u)} style={{ padding: '2px 6px', fontSize: '11px', background: '#0284c7', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                              Edit Role
+                            </button>
+                            <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Delete
                             </button>
-                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Reset
                             </button>
                           </div>
@@ -2114,21 +2133,28 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allUsers.filter(u => u.role === 'adjuster').map((u) => (
+                    {allUsers.filter(u => u.role.includes('adjuster')).map((u) => (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px', overflow: 'hidden' }}>
-                          <select 
-                            value={u.role}
-                            onChange={(e) => handleUserRoleUpdate(u.id, e.target.value)}
-                            style={{ width: '100%', maxWidth: '85px', padding: '2px 4px', fontSize: '11px', fontWeight: 'bold' }}
-                          >
-                            <option value="adjuster">ADJUSTER</option>
-                            <option value="admin">ADMIN</option>
-                          </select>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map(r => (
+                              <span key={r} style={{
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                background: r === 'admin' ? '#f3e8ff' : '#dbeafe',
+                                color: r === 'admin' ? '#6b21a8' : '#1e40af',
+                                border: `1px solid ${r === 'admin' ? '#d8b4fe' : '#93c5fd'}`
+                              }}>
+                                {r === 'admin' ? '🛡️ ADMIN' : '⚖️ ADJUSTER'}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
@@ -2140,14 +2166,17 @@ function App() {
                                 setFilterClaimId('');
                                 setCurrentTab('claims');
                               }}
-                              style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
+                              style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}
                             >
                               Claims
                             </button>
-                            <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            <button onClick={() => openEditRoleModal(u)} style={{ padding: '2px 6px', fontSize: '11px', background: '#0284c7', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                              Edit Role
+                            </button>
+                            <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Delete
                             </button>
-                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Reset
                             </button>
                           </div>
@@ -2389,6 +2418,65 @@ function App() {
             </div>
           )}
         </section>
+      )}
+
+      {/* Edit Staff Role Modal Dialog */}
+      {editingRoleUser && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+        }}>
+          <div className="panel" style={{ width: '440px', maxWidth: '92vw', padding: '24px', background: '#ffffff', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>🛡️ Edit Staff Role & Permissions</h3>
+              <button onClick={() => setEditingRoleUser(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', color: '#64748b' }}>✕</button>
+            </div>
+            
+            <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '6px', fontSize: '12px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
+              <div><strong>Employee Name:</strong> {editingRoleUser.full_name || editingRoleUser.username}</div>
+              <div><strong>Username:</strong> <code style={{ background: '#e2e8f0', padding: '1px 5px', borderRadius: '3px', fontWeight: 'bold' }}>{editingRoleUser.username}</code></div>
+              <div><strong>Staff ID:</strong> {editingRoleUser.customer_id}</div>
+            </div>
+
+            <div className="input-group" style={{ marginBottom: '20px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', display: 'block', marginBottom: '6px' }}>Enterprise Staff Role Assignment</label>
+              <select 
+                value={selectedRoleForUser}
+                onChange={(e) => setSelectedRoleForUser(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 'bold', background: '#fff' }}
+              >
+                <option value="adjuster">⚖️ Claims Adjuster</option>
+                <option value="admin">🛡️ System Administrator</option>
+                <option value="adjuster,admin">⚖️🛡️ Multi-Role (Adjuster & Administrator)</option>
+              </select>
+              <small style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', display: 'block', lineHeight: '1.4' }}>
+                Multi-role employees can dynamically switch active role contexts between Adjuster and Admin inside the Employee Portal.
+              </small>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button 
+                type="button" 
+                onClick={() => setEditingRoleUser(null)}
+                style={{ padding: '8px 14px', fontSize: '12px', background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={async () => {
+                  const u = editingRoleUser;
+                  setEditingRoleUser(null);
+                  await handleUserRoleUpdate(u.id, selectedRoleForUser);
+                }}
+                style={{ padding: '8px 16px', fontSize: '12px', background: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                Save Role Assignment
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
