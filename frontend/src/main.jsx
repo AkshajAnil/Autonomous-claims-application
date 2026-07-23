@@ -625,9 +625,12 @@ function App() {
         setIsLoginMode(true);
         setAuthError('Registration successful. Please log in.');
       } else {
+        setUser(resData);
+        setActiveRole(resData.role || (resData.roles && resData.roles[0]) || 'customer');
         if (resData.must_change_password) {
           setMustResetPassword(true);
         } else {
+          setMustResetPassword(false);
           checkAuth();
         }
       }

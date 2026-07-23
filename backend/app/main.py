@@ -358,22 +358,7 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
     log_audit(db, user.id, f"{role_label} Login", {"username": user.username, "role": user.role})
     
     user.roles = user.roles_list
-    # Check if forced password reset is active
-    if user.must_change_password:
-        return {
-            "message": "Password change required on first login.", 
-            "must_change_password": True,
-            "role": user.role,
-            "roles": user.roles_list,
-            "full_name": user.full_name
-        }
-        
-    return {
-        "message": "Logged in successfully",
-        "role": user.role,
-        "roles": user.roles_list,
-        "full_name": user.full_name
-    }
+    return user
 
 
 @app.post("/change-password")
