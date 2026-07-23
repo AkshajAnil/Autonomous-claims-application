@@ -864,54 +864,11 @@ function App() {
             </span>
             <small style={{ fontSize: '10px', opacity: 0.8, fontFamily: 'var(--font-mono)' }}>ID: {user.customer_id}</small>
           </div>
-          <button 
-            onClick={() => setShowSelfChangePwdModal(true)} 
-            title="Change Password" 
-            style={{
-              background: 'var(--mono-surface-dark)', 
-              border: '2px solid var(--mono-text-dark)', 
-              color: 'var(--mono-text-dark)', 
-              padding: '6px 10px', 
-              fontSize: '11px',
-              fontWeight: 'bold',
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <Key size={14} /> Password
-          </button>
           <button className="icon-btn-logout" onClick={logout} title="Logout" style={{background: 'var(--mono-surface-dark)', border: '2px solid var(--mono-text-dark)', color: 'var(--mono-text-dark)', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
             <LogOut size={16} />
           </button>
         </div>
       </header>
-
-      {/* Modal for Self Password Change */}
-      {showSelfChangePwdModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="panel" style={{ width: '380px', background: '#fff', padding: '20px' }}>
-            <h2 style={{ marginTop: 0, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>🔑 Update Account Password</h2>
-            <form onSubmit={handleSelfChangePassword}>
-              <div className="input-group" style={{ marginTop: '12px' }}>
-                <label>New Password</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={resetPwdValue} 
-                  onChange={(e) => setResetPwdValue(e.target.value)} 
-                  required 
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-                <button type="submit" style={{ flex: 1 }}>Save New Password</button>
-                <button type="button" onClick={() => setShowSelfChangePwdModal(false)} style={{ background: 'var(--mono-surface-dark)', color: 'var(--mono-text-dark)' }}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {error && <div className="error-banner">{error}</div>}
 
@@ -1350,7 +1307,9 @@ function App() {
             <div className="claims-list-scroll">
               {claims.length === 0 && <p className="muted">No claims currently assigned to you.</p>}
               {claims.map((c) => {
-                const isHighRisk = (c.risk_score || 0) > 70;
+                const trustScore = c.risk_score ?? 50;
+                const riskLabel = trustScore >= 70 ? 'LOW RISK' : trustScore >= 40 ? 'MED RISK' : 'HIGH RISK';
+                const riskColor = trustScore >= 70 ? 'var(--mono-success)' : trustScore >= 40 ? 'var(--mono-warning)' : 'var(--mono-danger)';
                 return (
                   <div 
                     key={c.id} 
@@ -1361,12 +1320,12 @@ function App() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '13px' }}>
                       <span>{c.claimant_name}</span>
                       <span style={{ 
-                        color: isHighRisk ? 'var(--mono-danger)' : 'var(--mono-warning)',
+                        color: riskColor,
                         fontSize: '11px',
                         background: 'rgba(0,0,0,0.05)',
                         padding: '1px 4px'
                       }}>
-                        {isHighRisk ? 'HIGH RISK' : 'MED RISK'}
+                        {riskLabel}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '4px', opacity: 0.8 }}>
