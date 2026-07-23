@@ -475,7 +475,6 @@ function App() {
 
   async function handleResetPassword(userId, username) {
     setError('');
-    setResetAlertMsg('');
     try {
       const response = await fetch(`${API_BASE}/admin/users/${userId}/reset-password`, {
         method: 'POST',
@@ -485,7 +484,12 @@ function App() {
         const resData = await response.json();
         throw new Error(resData.detail || 'Password reset request failed.');
       }
-      setUserDirBanner({ text: `Password reset link dispatched for account "${username}". The user can establish a new password via email.`, type: 'success' });
+      const data = await response.json();
+      setUserDirBanner({ 
+        text: `Password reset link dispatched for account "${username}" (${formatEmail(data.email)}).`, 
+        type: 'success',
+        resetUrl: data.reset_url
+      });
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
@@ -1996,7 +2000,7 @@ function App() {
                 <h2>User Roles Directory</h2>
                 {userDirBanner.text && (
                   <div style={{
-                    padding: '10px 14px',
+                    padding: '12px 16px',
                     marginBottom: '14px',
                     borderRadius: '6px',
                     fontSize: '12px',
@@ -2005,17 +2009,39 @@ function App() {
                     color: userDirBanner.type === 'error' ? '#991b1b' : '#166534',
                     border: `1px solid ${userDirBanner.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
+                    flexDirection: 'column',
+                    gap: '6px'
                   }}>
-                    <span>{userDirBanner.text}</span>
-                    <button 
-                      type="button"
-                      onClick={() => setUserDirBanner({ text: '', type: '' })}
-                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'inherit', padding: '0 4px' }}
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{userDirBanner.text}</span>
+                      <button 
+                        type="button"
+                        onClick={() => setUserDirBanner({ text: '', type: '', resetUrl: '' })}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'inherit', padding: '0 4px' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {userDirBanner.resetUrl && (
+                      <div style={{ background: '#ffffff', border: '1px solid #bbf7d0', padding: '8px 12px', borderRadius: '6px', marginTop: '4px' }}>
+                        <div style={{ fontSize: '11px', color: '#334155', fontWeight: 'bold', marginBottom: '4px' }}>🔗 Generated Password Reset Link:</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                            readOnly 
+                            value={userDirBanner.resetUrl}
+                            style={{ flex: 1, padding: '4px 8px', fontSize: '11px', fontFamily: 'monospace', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#f8fafc' }}
+                          />
+                          <a 
+                            href={userDirBanner.resetUrl} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            style={{ padding: '4px 10px', fontSize: '11px', background: '#2563eb', color: '#fff', borderRadius: '4px', textDecoration: 'none', fontWeight: 'bold' }}
+                          >
+                            Open Link ↗
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* SECTION 1: System Administrators Directory */}
