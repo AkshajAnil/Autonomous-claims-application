@@ -34,7 +34,7 @@ class UserOut(BaseModel):
     is_active: bool
     must_change_password: bool
     email: str | None = None
-    created_at: datetime
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

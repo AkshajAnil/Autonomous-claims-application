@@ -112,6 +112,7 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(160), unique=True, index=True, nullable=True)
     reset_token: Mapped[str | None] = mapped_column(String(120), nullable=True)
     reset_token_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, default=datetime.utcnow)
 
     @property
     def roles_list(self) -> list[str]:

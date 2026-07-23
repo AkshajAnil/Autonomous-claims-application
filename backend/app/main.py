@@ -83,6 +83,8 @@ def seed_users(db: Session):
         adm.role = "admin"
         adm.must_change_password = False
         adm.is_active = True
+        if not adm.created_at:
+            adm.created_at = datetime.datetime.utcnow()
         
     db.commit()
 
@@ -315,7 +317,7 @@ async def register(
     return user
 
 
-@app.post("/login")
+@app.post("/login", response_model=UserOut)
 def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)):
     clean_identifier = user_in.username.strip().lower() if user_in.username else ""
     user = db.query(User).filter(
