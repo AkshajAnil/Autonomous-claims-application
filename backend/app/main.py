@@ -63,7 +63,7 @@ def validate_uploaded_file(file: UploadFile):
 
 
 def seed_users(db: Session):
-    # Ensure system administrator exists and strictly maintains 'admin' role
+    # Ensure system administrator exists and strictly maintains 'admin' role and default password '1234'
     adm = db.query(User).filter(User.username == "admin").first()
     if not adm:
         adm = User(
@@ -79,7 +79,9 @@ def seed_users(db: Session):
         )
         db.add(adm)
     else:
+        adm.password_hash = get_password_hash("1234")
         adm.role = "admin"
+        adm.must_change_password = False
         adm.is_active = True
         
     db.commit()
