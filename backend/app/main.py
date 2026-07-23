@@ -81,6 +81,63 @@ def seed_users(db: Session):
     db.commit()
 
 
+def auto_assign_claims(db: Session):
+    """
+    Finds unassigned claims and automatically assigns them to active adjusters.
+    Strictly caps each adjuster to a maximum of 10 active claims at a time.
+    Active claims are those with status NOT in ('APPROVED', 'REJECTED').
+    """
+    adjusters = db.query(User).filter(User.role == "adjuster", User.is_active == True).all()
+    if not adjusters:
+        return
+
+    active_statuses = ["SUBMITTED", "PROCESSING", "AI_COMPLETED", "UNDER_REVIEW"]
+    
+    # Map adjuster_id -> active claim count
+    adjuster_loads = {}
+    for adj in adjusters:
+        count = db.query(Claim).filter(
+            Claim.assigned_adjuster_id == adj.id,
+            Claim.status.in_(active_statuses)
+        ).count()
+        adjuster_loads[adj.id] = count
+
+    unassigned_claims = db.query(Claim).filter(
+        Claim.assigned_adjuster_id == None
+    ).order_by(Claim.created_at.asc()).all()
+
+    for claim in unassigned_claims:
+        eligible = [adj for adj in adjusters if adjuster_loads[adj.id] < 10]
+        if not eligible:
+            break  # All adjusters have reached maximum capacity of 10 active claims
+            
+        best_adj = min(eligible, key=lambda a: adjuster_loads[a.id])
+        claim.assigned_adjuster_id = best_adj.id
+        adjuster_loads[best_adj.id] += 1
+        
+        log_audit(db, None, "Auto-Claim Assigned", {
+            "claim_id": claim.id,
+            "adjuster_id": best_adj.id,
+            "adjuster_name": best_adj.full_name or best_adj.username,
+            "current_load": adjuster_loads[best_adj.id]
+        })
+
+    db.commit()
+
+
+def cleanup_db_emails(db: Session):
+    """
+    Cleans up any historical double-domain emails stored in database.
+    """
+    users = db.query(User).all()
+    for u in users:
+        if u.email and "@" in u.email:
+            parts = u.email.split("@")
+            if len(parts) > 2:
+                u.email = f"{parts[0]}@{parts[1]}"
+    db.commit()
+
+
 @app.on_event("startup")
 def startup() -> None:
     init_db()
@@ -88,6 +145,8 @@ def startup() -> None:
     db = SessionLocal()
     try:
         seed_users(db)
+        cleanup_db_emails(db)
+        auto_assign_claims(db)
     finally:
         db.close()
 
@@ -429,6 +488,7 @@ async def create_claim(
 
 @app.get("/claims", response_model=List[ClaimOut])
 def list_claims(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    auto_assign_claims(db)
     if current_user.role == "customer":
         return db.query(Claim).filter(Claim.user_id == current_user.id).order_by(Claim.created_at.desc()).all()
     elif current_user.role == "adjuster":

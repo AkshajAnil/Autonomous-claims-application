@@ -27,6 +27,11 @@ import './styles.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
+function formatEmail(email) {
+  if (!email) return '-';
+  return email.replace(/(@[^\s@]+)@company\.com$/i, '$1');
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -1907,15 +1912,15 @@ function App() {
                 <h2>User Roles Directory</h2>
                 {/* SECTION 1: System Administrators Directory */}
                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: '#9333ea', marginTop: '1rem', marginBottom: '0.5rem' }}>🛡️ System Administrators Directory</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '1.5rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '1.5rem', tableLayout: 'fixed' }}>
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Username</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '15%' }}>User ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '24%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '13%' }}>Staff Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '16%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1924,24 +1929,36 @@ function App() {
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px' }}>{u.username}</td>
                         <td style={{ padding: '8px' }}>{u.full_name}</td>
-                        <td style={{ padding: '8px' }}>{u.email || '-'}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px' }}>
                           <select 
                             value={u.role}
                             onChange={(e) => handleUserRoleUpdate(u.id, e.target.value)}
-                            style={{ width: 'auto', padding: '2px 6px', fontSize: '12px', fontWeight: 'bold' }}
+                            style={{ width: 'auto', padding: '2px 6px', fontSize: '11px', fontWeight: 'bold' }}
                           >
                             <option value="admin">ADMIN</option>
                             <option value="adjuster">ADJUSTER</option>
                           </select>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                          <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                            Delete
-                          </button>
-                          <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                            Reset Pwd
-                          </button>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                            <button 
+                              onClick={() => {
+                                setFilterCustId(u.customer_id || '');
+                                setFilterClaimantName(u.full_name || u.username || '');
+                                setCurrentTab('claims');
+                              }}
+                              style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
+                            >
+                              Claims
+                            </button>
+                            <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                              Delete
+                            </button>
+                            <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                              Reset
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1950,15 +1967,15 @@ function App() {
 
                 {/* SECTION 2: Claims Adjusters Directory */}
                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--mono-primary)', marginBottom: '0.5rem' }}>⚖️ Claims Adjusters Directory</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginBottom: '1.5rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', marginBottom: '1.5rem', tableLayout: 'fixed' }}>
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Username</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '15%' }}>User ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '24%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '13%' }}>Staff Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '16%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1967,41 +1984,53 @@ function App() {
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px' }}>{u.username}</td>
                         <td style={{ padding: '8px' }}>{u.full_name}</td>
-                        <td style={{ padding: '8px' }}>{u.email || '-'}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px' }}>
                           <select 
                             value={u.role}
                             onChange={(e) => handleUserRoleUpdate(u.id, e.target.value)}
-                            style={{ width: 'auto', padding: '2px 6px', fontSize: '12px', fontWeight: 'bold' }}
+                            style={{ width: 'auto', padding: '2px 6px', fontSize: '11px', fontWeight: 'bold' }}
                           >
                             <option value="adjuster">ADJUSTER</option>
                             <option value="admin">ADMIN</option>
                           </select>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                          <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                            Delete
-                          </button>
-                          <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                            Reset Pwd
-                          </button>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                            <button 
+                              onClick={() => {
+                                setFilterCustId(u.customer_id || '');
+                                setFilterClaimantName(u.full_name || u.username || '');
+                                setCurrentTab('claims');
+                              }}
+                              style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
+                            >
+                              Claims
+                            </button>
+                            <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                              Delete
+                            </button>
+                            <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                              Reset
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                {/* SECTION B: Policyholders / Customers Directory (Read-Only Roles) */}
+                {/* SECTION B: Policyholders / Customers Directory */}
                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--mono-text-dark)', marginBottom: '0.5rem' }}>👥 Customer Accounts Directory</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed' }}>
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Username</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '15%' }}>User ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '24%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '13%' }}>Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '16%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2010,49 +2039,37 @@ function App() {
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px' }}>{u.username}</td>
                         <td style={{ padding: '8px' }}>{u.full_name}</td>
-                        <td style={{ padding: '8px' }}>{u.email || '-'}</td>
+                        <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
                         <td style={{ padding: '8px' }}>
                           <span style={{ padding: '2px 6px', background: '#e2e8f0', color: '#334155', fontWeight: 'bold', fontSize: '11px', borderRadius: '3px' }}>
                             CUSTOMER
                           </span>
                         </td>
-                        <td style={{ padding: '8px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                          <button 
-                            onClick={() => {
-                              setFilterCustId(u.customer_id || '');
-                              setFilterClaimantName(u.full_name || u.username || '');
-                              setCurrentTab('claims');
-                            }}
-                            style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
-                          >
-                            View Claims
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteUser(u.id, u.username)}
-                            style={{ 
-                              padding: '2px 6px', 
-                              fontSize: '11px', 
-                              background: 'var(--mono-danger)',
-                              color: '#fff',
-                              border: 'none',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Delete
-                          </button>
-                          <button 
-                            onClick={() => handleResetPassword(u.id)}
-                            style={{ 
-                              padding: '2px 6px', 
-                              fontSize: '11px', 
-                              background: 'var(--mono-secondary)',
-                              color: '#fff',
-                              border: 'none',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Reset Pwd
-                          </button>
+                        <td style={{ padding: '8px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                            <button 
+                              onClick={() => {
+                                setFilterCustId(u.customer_id || '');
+                                setFilterClaimantName(u.full_name || u.username || '');
+                                setCurrentTab('claims');
+                              }}
+                              style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
+                            >
+                              Claims
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteUser(u.id, u.username)}
+                              style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                            <button 
+                              onClick={() => handleResetPassword(u.id)}
+                              style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}
+                            >
+                              Reset
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
