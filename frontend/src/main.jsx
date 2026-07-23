@@ -20,7 +20,8 @@ import {
   ArrowRight,
   Clock,
   Key,
-  Mail
+  Mail,
+  Search
 } from 'lucide-react';
 import './styles.css';
 
@@ -58,6 +59,7 @@ function App() {
   
   // Admin Tabs
   const [currentTab, setCurrentTab] = useState('claims'); // 'claims', 'users', 'audit', 'analytics'
+  const [adminClaimSearchQuery, setAdminClaimSearchQuery] = useState('');
   const [showFileClaim, setShowFileClaim] = useState(false);
   const [registrationFileName, setRegistrationFileName] = useState('');
   const [claimFileNames, setClaimFileNames] = useState([]);
@@ -104,6 +106,19 @@ function App() {
     () => claims.find((claim) => claim.id === selectedId),
     [claims, selectedId],
   );
+
+  const filteredAdminClaims = useMemo(() => {
+    if (!adminClaimSearchQuery.trim()) return claims;
+    const q = adminClaimSearchQuery.toLowerCase().trim();
+    return claims.filter((c) => {
+      const matchId = c.id?.toLowerCase().includes(q);
+      const matchName = c.claimant_name?.toLowerCase().includes(q);
+      const matchPolicy = c.policy_number?.toLowerCase().includes(q);
+      const matchUser = c.user?.username?.toLowerCase().includes(q) || c.user?.customer_id?.toLowerCase().includes(q) || c.user?.full_name?.toLowerCase().includes(q);
+      const matchStatus = c.status?.toLowerCase().includes(q);
+      return matchId || matchName || matchPolicy || matchUser || matchStatus;
+    });
+  }, [claims, adminClaimSearchQuery]);
 
   // Activation / Setup Token Link State
   const [tokenFromUrl, setTokenFromUrl] = useState('');
@@ -1708,9 +1723,37 @@ function App() {
             <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '16px' }}>
               <aside className="panel" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                 <h3 style={{ fontSize: '13px', textTransform: 'uppercase', marginBottom: '8px', borderBottom: '1px solid var(--mono-text)', paddingBottom: '4px' }}>All System Claims</h3>
+                
+                {/* Search Bar for Claim ID / User / Policy */}
+                <div style={{ marginBottom: '10px' }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={13} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                    <input 
+                      type="text"
+                      placeholder="Search Claim ID, User, Policy #..."
+                      value={adminClaimSearchQuery}
+                      onChange={(e) => setAdminClaimSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '6px 8px 6px 28px',
+                        fontSize: '11px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '4px',
+                        background: '#fff'
+                      }}
+                    />
+                  </div>
+                  {adminClaimSearchQuery && (
+                    <div style={{ fontSize: '10px', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginTop: '4px', padding: '0 2px' }}>
+                      <span>Found {filteredAdminClaims.length} claim(s)</span>
+                      <a href="#" onClick={(e) => { e.preventDefault(); setAdminClaimSearchQuery(''); }} style={{ color: '#2563eb', fontWeight: 'bold' }}>Clear Filter</a>
+                    </div>
+                  )}
+                </div>
+
                 <div className="claims-list-scroll">
-                  {claims.length === 0 && <p className="muted">No claims registered.</p>}
-                  {claims.map((c) => (
+                  {filteredAdminClaims.length === 0 && <p className="muted" style={{ fontSize: '12px', padding: '8px 0' }}>No claims matching "{adminClaimSearchQuery}".</p>}
+                  {filteredAdminClaims.map((c) => (
                     <div 
                       key={c.id} 
                       className={`queue-card ${selectedId === c.id ? 'active' : ''}`}
@@ -1722,7 +1765,7 @@ function App() {
                         <span>{c.status}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', fontSize: '11px', marginTop: '4px', opacity: 0.8 }}>
-                        <span style={{ whiteSpace: 'nowrap', paddingRight: '8px' }}>SCORE: {c.risk_score ?? 'N/A'}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px' }}>ID: {c.id.slice(0, 8)}...</span>
                         <span style={{ textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {c.claim_type.split(' - ')[1] || c.claim_type}
                         </span>
@@ -1772,17 +1815,17 @@ function App() {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <form className="panel claim-form" onSubmit={handleAssign} style={{ gridArea: 'auto' }}>
-                        <h2>{selected.assigned_adjuster_id ? 'Reassign Adjuster' : 'Assign Adjuster'}</h2>
+                        <h2>{selected.assigned_adjuster_id ? 'Reassign Claim Ownership' : 'Assign Adjuster'}</h2>
                         <div className="input-group">
-                          <label>Select Adjuster</label>
+                          <label>Select Staff Member</label>
                           <select 
                             value={assigneeId} 
                             onChange={(e) => setAssigneeId(e.target.value)}
                             required
                           >
-                            <option value="">-- Choose Adjuster --</option>
-                            {adjusters.map((adj) => (
-                              <option key={adj.id} value={adj.id}>{adj.full_name} ({adj.username})</option>
+                            <option value="">-- Choose Employee --</option>
+                            {allUsers.filter(u => u.role === 'adjuster' || u.role === 'admin').map((adj) => (
+                              <option key={adj.id} value={adj.id}>{adj.full_name} ({adj.role === 'admin' ? 'Admin' : 'Adjuster'} - {adj.username})</option>
                             ))}
                           </select>
                         </div>
@@ -1945,6 +1988,15 @@ function App() {
                           </span>
                         </td>
                         <td style={{ padding: '8px', textAlign: 'right', display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                          <button 
+                            onClick={() => {
+                              setAdminClaimSearchQuery(u.username || u.full_name);
+                              setCurrentTab('claims');
+                            }}
+                            style={{ padding: '2px 6px', fontSize: '11px', background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer' }}
+                          >
+                            View Claims
+                          </button>
                           <button 
                             onClick={() => handleDeleteUser(u.id, u.username)}
                             style={{ 

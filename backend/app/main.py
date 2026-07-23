@@ -258,8 +258,9 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
         samesite="lax",
     )
     
-    # Log Audit: User Login
-    log_audit(db, user.id, "User Login", {"username": user.username, "role": user.role})
+    # Log Audit: Role-Specific Login
+    role_label = "Admin" if user.role == "admin" else ("Employee" if user.role == "adjuster" else "User")
+    log_audit(db, user.id, f"{role_label} Login", {"username": user.username, "role": user.role})
     
     # Check if forced password reset is active
     if user.must_change_password:
@@ -323,7 +324,8 @@ def forgot_password(req: SelfResetPasswordRequest, background_tasks: BackgroundT
 def logout(response: Response, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     logout_user(current_user.id)
     response.delete_cookie("access_token")
-    log_audit(db, current_user.id, "User Logout", {"username": current_user.username})
+    role_label = "Admin" if current_user.role == "admin" else ("Employee" if current_user.role == "adjuster" else "User")
+    log_audit(db, current_user.id, f"{role_label} Logout", {"username": current_user.username, "role": current_user.role})
     return {"message": "Logged out successfully"}
 
 
