@@ -952,10 +952,10 @@ function App() {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="adjuster">⚖️ Claims Adjuster</option>
-                    <option value="admin">🛡️ System Administrator</option>
+                    <option value="adjuster">Claims Adjuster</option>
+                    <option value="admin">System Administrator</option>
                     {(user.roles && user.roles.length > 1) || (user.role && user.role.includes(',')) ? (
-                      <option value="adjuster,admin">⚖️🛡️ Multi-Role Executive (All Access)</option>
+                      <option value="adjuster,admin">Multi-Role (Adjuster & Administrator)</option>
                     ) : null}
                   </select>
                 </div>
@@ -2096,7 +2096,7 @@ function App() {
                                 color: r === 'admin' ? '#6b21a8' : '#1e40af',
                                 border: `1px solid ${r === 'admin' ? '#d8b4fe' : '#93c5fd'}`
                               }}>
-                                {r === 'admin' ? '🛡️ ADMIN' : '⚖️ ADJUSTER'}
+                                {r === 'admin' ? 'ADMIN' : 'ADJUSTER'}
                               </span>
                             ))}
                           </div>
@@ -2151,7 +2151,7 @@ function App() {
                                 color: r === 'admin' ? '#6b21a8' : '#1e40af',
                                 border: `1px solid ${r === 'admin' ? '#d8b4fe' : '#93c5fd'}`
                               }}>
-                                {r === 'admin' ? '🛡️ ADMIN' : '⚖️ ADJUSTER'}
+                                {r === 'admin' ? 'ADMIN' : 'ADJUSTER'}
                               </span>
                             ))}
                           </div>
@@ -2429,7 +2429,7 @@ function App() {
         }}>
           <div className="panel" style={{ width: '440px', maxWidth: '92vw', padding: '24px', background: '#ffffff', borderRadius: '8px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>🛡️ Edit Staff Role & Permissions</h3>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', color: '#0f172a' }}>Edit Staff Role & Permissions</h3>
               <button onClick={() => setEditingRoleUser(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold', color: '#64748b' }}>✕</button>
             </div>
             
@@ -2446,9 +2446,9 @@ function App() {
                 onChange={(e) => setSelectedRoleForUser(e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', fontWeight: 'bold', background: '#fff' }}
               >
-                <option value="adjuster">⚖️ Claims Adjuster</option>
-                <option value="admin">🛡️ System Administrator</option>
-                <option value="adjuster,admin">⚖️🛡️ Multi-Role (Adjuster & Administrator)</option>
+                <option value="adjuster">Claims Adjuster</option>
+                <option value="admin">System Administrator</option>
+                <option value="adjuster,admin">Multi-Role (Adjuster & Administrator)</option>
               </select>
               <small style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', display: 'block', lineHeight: '1.4' }}>
                 Multi-role employees can dynamically switch active role contexts between Adjuster and Admin inside the Employee Portal.
