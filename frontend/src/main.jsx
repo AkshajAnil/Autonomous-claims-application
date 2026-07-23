@@ -798,14 +798,6 @@ function App() {
             </h2>
             {authError && <div className="error-banner">{authError}</div>}
             
-            {isLoginMode && loginRoleTab === 'admin' && (
-              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', padding: '10px 14px', borderRadius: '6px', fontSize: '12px', color: '#334155', marginBottom: '14px' }}>
-                🔐 <strong>Default Administrator Credentials:</strong>
-                <div style={{ marginTop: '4px', fontFamily: 'var(--font-mono)' }}>
-                  Username: <code style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>admin</code> &nbsp;|&nbsp; Password: <code style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px' }}>1234</code>
-                </div>
-              </div>
-            )}
             
             <div className="input-group">
               <label>Username</label>
