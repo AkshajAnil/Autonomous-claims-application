@@ -8,7 +8,7 @@ class DecisionEngine:
     - Actionable Next Actions Checklist
     - Top Positive and Top Negative rule summaries
     """
-    def evaluate(self, risk_score: int, evidence_confidence: int, triggered_rules: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def evaluate(self, risk_score: int, evidence_confidence: int, triggered_rules: List[Dict[str, Any]], claim: Any = None) -> Dict[str, Any]:
         # Determine Decision Tier based on Trust & Safety Score (100 = Highest Safety/Trust)
         if risk_score >= 85:
             decision = "STRAIGHT_THROUGH"
@@ -70,13 +70,13 @@ class DecisionEngine:
             "ocr_high": "highly legible documentation scans",
             "image_authentic": "authentic visual proof files with intact metadata",
             "timely_submission": "reporting of the claim in a timely manner",
-            "gps_mismatch": "a location discrepancy between the reported incident place and the uploaded photo coordinates",
-            "weather_contradicts": "weather station records contradicting the claimed weather conditions",
-            "ocr_low": "highly unreadable invoice or document text scan quality",
+            "gps_mismatch": "a location discrepancy between the reported incident place and photo coordinates",
+            "weather_contradicts": "weather station records contradicting claimed weather conditions",
+            "ocr_low": "low invoice or document text scan quality",
             "missing_docs": "missing required supporting documents",
-            "exceeds_policy_limit": "a requested payout amount that exceeds standard policy limits",
+            "exceeds_policy_limit": "requested payout amount exceeding standard policy limits",
             "extremely_high_amount": "an unusually high claim value request for this category",
-            "story_low": "logical inconsistencies within the written story description",
+            "story_low": "logical inconsistencies within written story description",
             "long_submission_delay": "a late claim submission timeline",
             "sameday_high_value": "an immediate high-value claim filed on the same day the policy took effect"
         }
@@ -95,36 +95,42 @@ class DecisionEngine:
         pos_str = " and ".join(pos_phrases) if pos_phrases else "active policy standing"
         neg_str = " and ".join(neg_phrases)
 
-        # Synthesize plain English Jargon-Free Decision Reason
+        # Build Claim-Specific Context
+        claimant = getattr(claim, "claimant_name", None) or "Policyholder"
+        desc_text = getattr(claim, "description", None)
+        desc_stmt = f'"{desc_text}"' if desc_text else "declared incident"
+        loc_text = getattr(claim, "incident_location", None)
+        loc_stmt = f" at {loc_text}" if loc_text else ""
+        amt_val = getattr(claim, "amount_requested", None)
+        amt_stmt = f" for ₹{int(amt_val):,}" if amt_val else ""
+
+        # Synthesize plain English Jargon-Free & Claim-Specific Decision Reason
         if decision == "STRAIGHT_THROUGH":
             multi_sentence_reason = (
-                f"This claim has been automatically approved for settlement based on a high verified Trust Score of {risk_score}/100. "
-                f"Multiple positive corroborations, including {pos_str}, strongly support the legitimacy of this claim. "
-                f"All required evidence passed visual, temporal, and location integrity checks, indicating no suspicious patterns."
+                f"AI investigation for {claimant}'s claim ({desc_stmt}{loc_stmt}{amt_stmt}) passed with a verified Trust Score of {risk_score}/100. "
+                f"Key verification indicators including {pos_str} strongly corroborate the reported event details. "
+                f"All submitted evidence files passed visual, temporal, and location integrity checks."
             )
         elif decision == "FAST_REVIEW":
             multi_sentence_reason = (
-                f"This claim has been routed for a quick manual validation with a Trust Score of {risk_score}/100. "
-                f"While primary checks such as {pos_str} are fully verified, minor exceptions like {neg_str or 'incomplete optional records'} "
-                f"prevent straight-through processing. A reviewer will perform a brief inspection before releasing the payout."
+                f"AI investigation for {claimant}'s claim ({desc_stmt}{loc_stmt}{amt_stmt}) scored a Trust Score of {risk_score}/100 and requires quick validation. "
+                f"While primary checks such as {pos_str} are fully verified, minor exceptions like {neg_str or 'optional evidence gaps'} "
+                f"warrant a brief manual check by an adjuster before payout."
             )
         elif decision == "MANUAL_REVIEW":
             multi_sentence_reason = (
-                f"This claim has been assigned for standard manual review by an adjuster with a Trust Score of {risk_score}/100. "
-                f"Although the policy is active, specific irregularities such as {neg_str or 'unverified facts'} require closer inspection. "
-                f"An adjuster will verify the repair invoices and coordinates manually before releasing the payout."
+                f"AI investigation for {claimant}'s claim ({desc_stmt}{loc_stmt}{amt_stmt}) yielded a Trust Score of {risk_score}/100. "
+                f"Specific risk signals including {neg_str or 'unconfirmed details'} require detailed human review before settlement."
             )
         elif decision == "HIGH_RISK_INVESTIGATION":
             multi_sentence_reason = (
-                f"This claim has been flagged for an in-depth security investigation with a low Trust Score of {risk_score}/100. "
-                f"Significant inconsistencies were detected, specifically {neg_str or reason_desc.lower()}. "
-                f"This claim requires a formal review by the Special Investigations Unit (SIU) to verify the authenticity of the report."
+                f"AI investigation for {claimant}'s claim ({desc_stmt}{loc_stmt}{amt_stmt}) flagged high risk with a Trust Score of {risk_score}/100. "
+                f"Significant inconsistencies were detected in {neg_str or reason_desc.lower()}, requiring a formal review by SIU."
             )
         else:
             multi_sentence_reason = (
-                f"This claim has been rejected from automatic processing due to a critical Trust Score of {risk_score}/100. "
-                f"Severe risk triggers were encountered, including {neg_str or reason_desc.lower()}. "
-                f"The incident details contradict independent external verification sources, indicating a high risk of misrepresentation."
+                f"AI investigation for {claimant}'s claim ({desc_stmt}{loc_stmt}{amt_stmt}) failed risk threshold with a Trust Score of {risk_score}/100. "
+                f"Critical risk factors including {neg_str or reason_desc.lower()} contradict the declared incident."
             )
 
         # Generate Actionable Next Actions

@@ -2024,11 +2024,11 @@ function App() {
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
                       <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Username</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '10%' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right', width: '14%' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '16%' }}>Full Name</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '20%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Staff Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '18%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2038,11 +2038,11 @@ function App() {
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
-                        <td style={{ padding: '8px' }}>
+                        <td style={{ padding: '8px', overflow: 'hidden' }}>
                           <select 
                             value={u.role}
                             onChange={(e) => handleUserRoleUpdate(u.id, e.target.value)}
-                            style={{ width: 'auto', padding: '2px 6px', fontSize: '11px', fontWeight: 'bold' }}
+                            style={{ width: '100%', maxWidth: '85px', padding: '2px 4px', fontSize: '11px', fontWeight: 'bold' }}
                           >
                             <option value="admin">ADMIN</option>
                             <option value="adjuster">ADJUSTER</option>
@@ -2069,11 +2069,11 @@ function App() {
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
                       <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Username</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '10%' }}>Staff Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right', width: '14%' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '16%' }}>Full Name</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '20%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Staff Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '18%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2083,11 +2083,11 @@ function App() {
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.full_name}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatEmail(u.email)}</td>
-                        <td style={{ padding: '8px' }}>
+                        <td style={{ padding: '8px', overflow: 'hidden' }}>
                           <select 
                             value={u.role}
                             onChange={(e) => handleUserRoleUpdate(u.id, e.target.value)}
-                            style={{ width: 'auto', padding: '2px 6px', fontSize: '11px', fontWeight: 'bold' }}
+                            style={{ width: '100%', maxWidth: '85px', padding: '2px 4px', fontSize: '11px', fontWeight: 'bold' }}
                           >
                             <option value="adjuster">ADJUSTER</option>
                             <option value="admin">ADMIN</option>
@@ -2126,11 +2126,11 @@ function App() {
                   <thead>
                     <tr style={{ background: 'var(--mono-surface-dark)', borderBottom: '2px solid var(--mono-text-dark)' }}>
                       <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>User ID</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Username</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Full Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '22%' }}>Email</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '10%' }}>Role</th>
-                      <th style={{ padding: '8px', textAlign: 'right', width: '14%' }}>Actions</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '18%' }}>Username</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '16%' }}>Full Name</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '20%' }}>Email</th>
+                      <th style={{ padding: '8px', textAlign: 'left', width: '14%' }}>Role</th>
+                      <th style={{ padding: '8px', textAlign: 'right', width: '18%' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>

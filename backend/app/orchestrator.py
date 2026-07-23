@@ -83,7 +83,7 @@ class ClaimOrchestrator:
 
             # Step 6: DECISION_GENERATED
             dec_engine = DecisionEngine()
-            dec_res = dec_engine.evaluate(risk_res["risk_score"], evid_conf, risk_res["triggered_rules"])
+            dec_res = dec_engine.evaluate(risk_res["risk_score"], evid_conf, risk_res["triggered_rules"], claim=claim)
 
             final_decision_payload["summary"] = dec_res.get("decision_reason", final_decision_payload.get("summary"))
             final_decision_payload["decision_reason"] = dec_res.get("decision_reason", final_decision_payload.get("decision_reason"))
