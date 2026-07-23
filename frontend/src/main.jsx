@@ -646,7 +646,7 @@ function App() {
       <main className="shell auth-shell">
         <div style={{ maxWidth: '460px', margin: '3rem auto', width: '100%' }}>
           <div className="brand-header">
-            <Key size={40} className="brand-icon" />
+            <ShieldCheck size={40} className="brand-icon" />
             <h1>Enterprise Account Setup</h1>
             <p className="brand-sub">Establish Corporate Password via One-Time Token</p>
           </div>
@@ -688,7 +688,7 @@ function App() {
       <main className="shell auth-shell">
         <div style={{ maxWidth: '400px', margin: '4rem auto', width: '100%' }}>
           <div className="brand-header">
-            <Key size={40} className="brand-icon" />
+            <ShieldCheck size={40} className="brand-icon" />
             <h1>Force Reset Password</h1>
             <p className="brand-sub">Security Policy Constraint Active</p>
           </div>
@@ -719,7 +719,7 @@ function App() {
       <main className="shell auth-shell">
         <div style={{ maxWidth: '460px', margin: '3rem auto', width: '100%' }}>
           <div className="brand-header">
-            <Key size={40} className="brand-icon" />
+            <ShieldCheck size={40} className="brand-icon" />
             <h1>Self-Service Password Reset</h1>
             <p className="brand-sub">Request Password Reset Link via Registered Email</p>
           </div>
@@ -889,7 +889,7 @@ function App() {
             {isLoginMode && (
               <p style={{marginTop: '0.8rem', textAlign: 'center', fontSize: '12px'}}>
                 <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPasswordMode(true); }} style={{ color: 'var(--mono-text-light)' }}>
-                  🔑 Forgot Password? Reset Here
+                  Forgot Password? Reset Account
                 </a>
               </p>
             )}
