@@ -122,6 +122,17 @@ def auto_assign_claims(db: Session):
             "current_load": adjuster_loads[best_adj.id]
         })
 
+    # Ensure newly provisioned zero-load adjusters receive claims
+    zero_load_adjusters = [adj for adj in adjusters if adjuster_loads[adj.id] == 0]
+    if zero_load_adjusters:
+        unassigned = db.query(Claim).filter(Claim.assigned_adjuster_id == None).all()
+        for claim in unassigned:
+            for adj in zero_load_adjusters:
+                if adjuster_loads[adj.id] < 10:
+                    claim.assigned_adjuster_id = adj.id
+                    adjuster_loads[adj.id] += 1
+                    break
+
     db.commit()
 
 
@@ -910,6 +921,12 @@ def update_user_role(
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
         
+    if user.username == "admin" or user.customer_id == "ADM-SYSTEM":
+        raise HTTPException(
+            status_code=400,
+            detail="Role modification denied. The primary System Administrator account ('admin') role cannot be changed."
+        )
+
     if user.role == "customer" or role == "customer":
         raise HTTPException(
             status_code=400, 

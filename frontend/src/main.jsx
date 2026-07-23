@@ -118,7 +118,16 @@ function App() {
   const filteredAdminClaims = useMemo(() => {
     return claims.filter((c) => {
       if (filterAdjusterId) {
-        if (c.assigned_adjuster_id !== filterAdjusterId && c.assigned_adjuster?.id !== filterAdjusterId) return false;
+        const targetAdj = allUsers.find(u => u.id === filterAdjusterId);
+        const targetUsername = targetAdj?.username?.toLowerCase();
+        const targetName = targetAdj?.full_name?.toLowerCase();
+        const isMatch = (
+          c.assigned_adjuster_id === filterAdjusterId ||
+          c.assigned_adjuster?.id === filterAdjusterId ||
+          (targetUsername && c.assigned_adjuster?.username?.toLowerCase() === targetUsername) ||
+          (targetName && c.assigned_adjuster?.full_name?.toLowerCase() === targetName)
+        );
+        if (!isMatch) return false;
       }
       if (filterCustId.trim()) {
         const qCust = filterCustId.toLowerCase().trim();
@@ -485,6 +494,12 @@ function App() {
 
   async function handleUserRoleUpdate(userId, newRole) {
     setError('');
+    const targetUser = allUsers.find(u => u.id === userId);
+    if (targetUser && (targetUser.username === 'admin' || targetUser.customer_id === 'ADM-SYSTEM')) {
+      alert('❌ Role modification denied: The primary System Administrator account ("admin") role cannot be changed.');
+      loadAllUsers();
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE}/admin/users/${userId}/role?role=${newRole}`, {
         method: 'POST',
@@ -494,10 +509,13 @@ function App() {
         const resData = await response.json();
         throw new Error(resData.detail || 'Role update failed');
       }
+      alert(`✅ User role updated to ${newRole.toUpperCase()} successfully.`);
       loadAllUsers();
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
+      alert(`❌ Role update failed: ${e.message}`);
+      loadAllUsers();
     }
   }
 
