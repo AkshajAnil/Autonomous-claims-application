@@ -63,8 +63,9 @@ def validate_uploaded_file(file: UploadFile):
 
 
 def seed_users(db: Session):
-    # Only seed initial system administrator
-    if not db.query(User).filter(User.username == "admin").first():
+    # Ensure system administrator exists and strictly maintains 'admin' role
+    adm = db.query(User).filter(User.username == "admin").first()
+    if not adm:
         adm = User(
             username="admin",
             password_hash=get_password_hash("1234"),
@@ -77,6 +78,9 @@ def seed_users(db: Session):
             is_active=True
         )
         db.add(adm)
+    else:
+        adm.role = "admin"
+        adm.is_active = True
         
     db.commit()
 
@@ -316,10 +320,14 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     
     if user_in.expected_role:
-        # Admins are system staff and can log in under either "admin" or "adjuster" (employee) tabs
-        if user_in.expected_role == "adjuster" and user.role in ("adjuster", "admin"):
+        # Primary admin and staff users (Admins & Adjusters) can log in under staff tabs
+        if user.username == "admin" or user.customer_id == "ADM-SYSTEM":
+            if user.role != "admin":
+                user.role = "admin"
+                db.commit()
+        elif user_in.expected_role in ("admin", "adjuster") and user.role in ("admin", "adjuster"):
             pass
-        elif user_in.expected_role == "admin" and user.role == "admin":
+        elif user_in.expected_role == "customer" and user.role == "customer":
             pass
         elif user_in.expected_role == "customer":
             pass
@@ -329,10 +337,16 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
                 "adjuster": "Claims Adjuster",
                 "customer": "Policyholder"
             }
-            actual_label = role_labels.get(user.role, user.role)
+            tab_labels = {
+                "admin": "Administrator Executive",
+                "adjuster": "Claims Adjuster",
+                "customer": "Policyholder Portal"
+            }
+            actual_label = role_labels.get(user.role, user.role.capitalize())
+            correct_tab = tab_labels.get(user.role, "correct")
             raise HTTPException(
                 status_code=400,
-                detail=f"Role Mismatch: '{user.username}' is registered as a {actual_label}. Please switch to the {actual_label} login portal tab."
+                detail=f"Role Mismatch: '{user.username}' is registered as a {actual_label}. Please switch to the {correct_tab} login portal tab."
             )
 
     # Account Deactivation check
