@@ -217,7 +217,7 @@ async def register(
         full_name=full_name,
         id_card_url=id_card_url,
         is_identity_verified=True,
-        email=f"{username}@company.com",
+        email=username if "@" in username else f"{username}@company.com",
         must_change_password=False,
         is_active=True
     )
@@ -432,8 +432,8 @@ def list_claims(db: Session = Depends(get_db), current_user: User = Depends(get_
     if current_user.role == "customer":
         return db.query(Claim).filter(Claim.user_id == current_user.id).order_by(Claim.created_at.desc()).all()
     elif current_user.role == "adjuster":
-        # Adjusters see claims assigned to them OR unassigned claims so they can pull them
-        return db.query(Claim).filter((Claim.assigned_adjuster_id == current_user.id) | (Claim.assigned_adjuster_id == None)).order_by(Claim.created_at.desc()).all()
+        # Adjusters see claims assigned strictly to them
+        return db.query(Claim).filter(Claim.assigned_adjuster_id == current_user.id).order_by(Claim.created_at.desc()).all()
     elif current_user.role == "admin":
         return db.query(Claim).order_by(Claim.created_at.desc()).all()
     return []
