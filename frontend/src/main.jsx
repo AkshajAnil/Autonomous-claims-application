@@ -942,7 +942,7 @@ function App() {
                     value={activeRole} 
                     onChange={(e) => setActiveRole(e.target.value)}
                     style={{
-                      padding: '2px 6px',
+                      padding: '3px 8px',
                       fontSize: '11px',
                       fontWeight: 'bold',
                       borderRadius: '4px',
@@ -952,11 +952,11 @@ function App() {
                       cursor: 'pointer'
                     }}
                   >
-                    {user.roles.map(r => (
-                      <option key={r} value={r}>
-                        {r === 'admin' ? '🛡️ Administrator' : r === 'adjuster' ? '⚖️ Adjuster' : r.toUpperCase()}
-                      </option>
-                    ))}
+                    <option value="adjuster">⚖️ Claims Adjuster</option>
+                    <option value="admin">🛡️ System Administrator</option>
+                    {(user.roles && user.roles.length > 1) || (user.role && user.role.includes(',')) ? (
+                      <option value="adjuster,admin">⚖️🛡️ Multi-Role Executive (All Access)</option>
+                    ) : null}
                   </select>
                 </div>
               ) : (

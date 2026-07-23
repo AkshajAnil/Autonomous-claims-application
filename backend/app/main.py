@@ -946,13 +946,15 @@ def update_user_role(
             detail="Role changes are only permitted between Adjuster and Admin roles. Customers cannot be converted to staff roles."
         )
 
-    if role not in {"adjuster", "admin"}:
-        raise HTTPException(status_code=400, detail="Invalid target role. Must be 'adjuster' or 'admin'.")
+    valid_roles = {"adjuster", "admin", "adjuster,admin", "admin,adjuster"}
+    if role not in valid_roles:
+        raise HTTPException(status_code=400, detail="Invalid target role. Must be 'adjuster', 'admin', or multi-role ('adjuster,admin').")
         
     old_role = user.role
     user.role = role
     db.commit()
     db.refresh(user)
+    user.roles = user.roles_list
     
     log_audit(db, current_user.id, "Role Assignment", {
         "target_user_id": user_id,
