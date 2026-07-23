@@ -127,20 +127,23 @@ def auto_assign_claims(db: Session):
 
 def cleanup_db_emails(db: Session):
     """
-    Cleans up any historical double-domain emails stored in database safely.
+    Cleans up any historical double-domain emails or .dup extensions stored in database safely.
     """
     try:
         users = db.query(User).all()
         for u in users:
-            if u.email and "@" in u.email:
-                parts = u.email.split("@")
-                if len(parts) > 2:
-                    clean = f"{parts[0]}@{parts[1]}"
+            if u.email:
+                clean = u.email.replace(".dup", "")
+                if "@" in clean:
+                    parts = clean.split("@")
+                    if len(parts) > 2:
+                        clean = f"{parts[0]}@{parts[1]}"
+                if clean != u.email:
                     existing = db.query(User).filter(User.email == clean, User.id != u.id).first()
                     if not existing:
                         u.email = clean
                     else:
-                        u.email = f"{u.username}.dup@{parts[1]}"
+                        u.email = f"{u.username}@company.com"
         db.commit()
     except Exception as e:
         db.rollback()
@@ -301,17 +304,25 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
     if not user or not verify_password(user_in.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     
-    if user_in.expected_role and user.role != user_in.expected_role:
-        role_labels = {
-            "admin": "Administrator",
-            "adjuster": "Claims Adjuster",
-            "customer": "Policyholder"
-        }
-        actual_label = role_labels.get(user.role, user.role)
-        raise HTTPException(
-            status_code=400,
-            detail=f"Role Mismatch: '{user.username}' is registered as a {actual_label}. Please switch to the {actual_label} login portal tab."
-        )
+    if user_in.expected_role:
+        # Admins are system staff and can log in under either "admin" or "adjuster" (employee) tabs
+        if user_in.expected_role == "adjuster" and user.role in ("adjuster", "admin"):
+            pass
+        elif user_in.expected_role == "admin" and user.role == "admin":
+            pass
+        elif user_in.expected_role == "customer":
+            pass
+        else:
+            role_labels = {
+                "admin": "Administrator",
+                "adjuster": "Claims Adjuster",
+                "customer": "Policyholder"
+            }
+            actual_label = role_labels.get(user.role, user.role)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Role Mismatch: '{user.username}' is registered as a {actual_label}. Please switch to the {actual_label} login portal tab."
+            )
 
     # Account Deactivation check
     if not user.is_active:

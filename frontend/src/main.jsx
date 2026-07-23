@@ -29,7 +29,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
 function formatEmail(email) {
   if (!email) return '-';
-  return email.replace(/(@[^\s@]+)@company\.com$/i, '$1');
+  return email.replace(/\.dup/gi, '').replace(/(@[^\s@]+)@company\.com$/i, '$1');
 }
 
 function App() {
@@ -127,7 +127,9 @@ function App() {
         const name = c.claimant_name?.toLowerCase() || '';
         const username = c.user?.username?.toLowerCase() || '';
         const fullName = c.user?.full_name?.toLowerCase() || '';
-        if (!name.includes(qName) && !username.includes(qName) && !fullName.includes(qName)) return false;
+        const adjName = c.assigned_adjuster?.full_name?.toLowerCase() || '';
+        const adjUser = c.assigned_adjuster?.username?.toLowerCase() || '';
+        if (!name.includes(qName) && !username.includes(qName) && !fullName.includes(qName) && !adjName.includes(qName) && !adjUser.includes(qName)) return false;
       }
       if (filterClaimId.trim()) {
         const qClaim = filterClaimId.toLowerCase().trim();
@@ -446,14 +448,16 @@ function App() {
         const resData = await response.json();
         throw new Error(resData.detail || 'Failed to delete user account.');
       }
+      alert(`✅ Account "${username}" deleted successfully.`);
       loadAllUsers();
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
+      alert(`❌ Delete failed: ${e.message}`);
     }
   }
 
-  async function handleResetPassword(userId) {
+  async function handleResetPassword(userId, username) {
     setError('');
     setResetAlertMsg('');
     try {
@@ -466,9 +470,11 @@ function App() {
         throw new Error(resData.detail || 'Password reset request failed.');
       }
       const data = await response.json();
+      alert(`✅ Password reset link dispatched for account "${username}". The user can establish a new password via email.`);
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
+      alert(`❌ Reset Password failed: ${e.message}`);
     }
   }
 
@@ -1955,7 +1961,7 @@ function App() {
                             <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
                               Delete
                             </button>
-                            <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
                               Reset
                             </button>
                           </div>
@@ -2010,7 +2016,7 @@ function App() {
                             <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer' }}>
                               Delete
                             </button>
-                            <button onClick={() => handleResetPassword(u.id)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}>
                               Reset
                             </button>
                           </div>
@@ -2064,7 +2070,7 @@ function App() {
                               Delete
                             </button>
                             <button 
-                              onClick={() => handleResetPassword(u.id)}
+                              onClick={() => handleResetPassword(u.id, u.username)}
                               style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer' }}
                             >
                               Reset
