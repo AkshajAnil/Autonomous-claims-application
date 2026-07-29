@@ -513,19 +513,10 @@ function App() {
     }
   }
 
-  async function handleResetPassword(userId, username, existingEmail) {
+  async function handleResetPassword(userId, username) {
     setError('');
-    let targetEmail = existingEmail;
-    if (!targetEmail || targetEmail.endsWith('@company.com')) {
-      const input = prompt(`Enter recipient email address to send password reset link for account "${username}":`, targetEmail && !targetEmail.endsWith('@company.com') ? targetEmail : '');
-      if (input === null) return; // User cancelled
-      if (input.trim()) {
-        targetEmail = input.trim();
-      }
-    }
     try {
-      const emailQuery = targetEmail ? `?target_email=${encodeURIComponent(targetEmail)}` : '';
-      const response = await fetch(`${API_BASE}/admin/users/${userId}/reset-password${emailQuery}`, {
+      const response = await fetch(`${API_BASE}/admin/users/${userId}/reset-password`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -536,10 +527,8 @@ function App() {
       const data = await response.json();
       setUserDirBanner({ 
         text: `Password reset link dispatched for account "${username}" (${formatEmail(data.email)}).`, 
-        type: 'success',
-        resetUrl: data.reset_url
+        type: 'success'
       });
-      loadAllUsers();
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
@@ -2140,27 +2129,17 @@ function App() {
                     color: userDirBanner.type === 'error' ? '#991b1b' : '#166534',
                     border: `1px solid ${userDirBanner.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px'
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{userDirBanner.text}</span>
-                      <button 
-                        type="button"
-                        onClick={() => setUserDirBanner({ text: '', type: '', resetUrl: '' })}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'inherit', padding: '0 4px' }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    {userDirBanner.resetUrl && (
-                      <div style={{ background: '#fff', padding: '8px 10px', borderRadius: '4px', border: '1px solid #bbf7d0', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>🔗 Direct Setup / Reset Link:</span>
-                        <a href={userDirBanner.resetUrl} target="_blank" rel="noreferrer" style={{ color: '#15803d', fontWeight: 'bold', textDecoration: 'underline', wordBreak: 'break-all' }}>
-                          {userDirBanner.resetUrl}
-                        </a>
-                      </div>
-                    )}
+                    <span>{userDirBanner.text}</span>
+                    <button 
+                      type="button"
+                      onClick={() => setUserDirBanner({ text: '', type: '' })}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'inherit', padding: '0 4px' }}
+                    >
+                      ✕
+                    </button>
                   </div>
                 )}
                 {/* SECTION 1: System Administrators Directory */}
@@ -2213,7 +2192,7 @@ function App() {
                               <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                                 Delete
                               </button>
-                              <button onClick={() => handleResetPassword(u.id, u.username, u.email)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                              <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                                 Reset
                               </button>
                             </div>
@@ -2281,7 +2260,7 @@ function App() {
                             <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Delete
                             </button>
-                            <button onClick={() => handleResetPassword(u.id, u.username, u.email)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Reset
                             </button>
                           </div>
