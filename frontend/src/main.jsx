@@ -2126,17 +2126,27 @@ function App() {
                     color: userDirBanner.type === 'error' ? '#991b1b' : '#166534',
                     border: `1px solid ${userDirBanner.type === 'error' ? '#fecaca' : '#bbf7d0'}`,
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
+                    flexDirection: 'column',
+                    gap: '6px'
                   }}>
-                    <span>{userDirBanner.text}</span>
-                    <button 
-                      type="button"
-                      onClick={() => setUserDirBanner({ text: '', type: '' })}
-                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'inherit', padding: '0 4px' }}
-                    >
-                      ✕
-                    </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{userDirBanner.text}</span>
+                      <button 
+                        type="button"
+                        onClick={() => setUserDirBanner({ text: '', type: '', resetUrl: '' })}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'inherit', padding: '0 4px' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {userDirBanner.resetUrl && (
+                      <div style={{ background: '#fff', padding: '8px 10px', borderRadius: '4px', border: '1px solid #bbf7d0', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>🔗 Direct Setup / Reset Link:</span>
+                        <a href={userDirBanner.resetUrl} target="_blank" rel="noreferrer" style={{ color: '#15803d', fontWeight: 'bold', textDecoration: 'underline', wordBreak: 'break-all' }}>
+                          {userDirBanner.resetUrl}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* SECTION 1: System Administrators Directory */}
@@ -2177,17 +2187,23 @@ function App() {
                           </div>
                         </td>
                         <td style={{ padding: '8px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                            <button onClick={() => openEditRoleModal(u)} style={{ padding: '2px 6px', fontSize: '11px', background: '#0284c7', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
-                              Edit Role
-                            </button>
-                            <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
-                              Delete
-                            </button>
-                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
-                              Reset
-                            </button>
-                          </div>
+                          {u.username === 'admin' || u.customer_id === 'ADM-SYSTEM' ? (
+                            <span style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px' }}>
+                              🔒 System Admin (Protected)
+                            </span>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                              <button onClick={() => openEditRoleModal(u)} style={{ padding: '2px 6px', fontSize: '11px', background: '#0284c7', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                                Edit Role
+                              </button>
+                              <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                                Delete
+                              </button>
+                              <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                                Reset
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -869,6 +869,9 @@ def delete_user(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found.")
         
+    if target_user.username == "admin" or target_user.customer_id == "ADM-SYSTEM":
+        raise HTTPException(status_code=400, detail="Deletion denied. The primary System Administrator account ('admin') cannot be deleted.")
+        
     if has_role(target_user, "admin"):
         active_admins = db.query(User).filter(User.role.contains("admin")).count()
         if active_admins <= 1:
