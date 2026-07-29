@@ -717,7 +717,13 @@ def create_employee(
         if req.email and "@" in req.email:
             base_username = req.email.split("@")[0].lower()
         else:
-            base_username = re.sub(r'[^a-zA-Z0-9]', '', req.full_name).lower()
+            parts = req.full_name.strip().lower().split()
+            if len(parts) >= 2:
+                first_two = parts[0][:2]
+                last_name = "".join(parts[1:])
+                base_username = re.sub(r'[^a-zA-Z0-9]', '', first_two + last_name)
+            else:
+                base_username = re.sub(r'[^a-zA-Z0-9]', '', req.full_name).lower()
             
         username = base_username
         idx = 1

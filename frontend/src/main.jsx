@@ -107,8 +107,17 @@ function App() {
   function handleEmpNameChange(val) {
     setEmpName(val);
     if (!empEmail && val.trim()) {
-      const clean = val.trim().toLowerCase().replace(/\s+/g, '.').replace(/[^a-zA-Z0-9.]/g, '');
-      setEmpUsername(clean);
+      const parts = val.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      let suggested = '';
+      if (parts.length >= 2) {
+        const firstName = parts[0];
+        const lastName = parts.slice(1).join('');
+        const firstTwo = firstName.slice(0, 2);
+        suggested = (firstTwo + lastName).replace(/[^a-zA-Z0-9]/g, '');
+      } else if (parts.length === 1) {
+        suggested = parts[0].replace(/[^a-zA-Z0-9]/g, '');
+      }
+      setEmpUsername(suggested);
     }
   }
   
