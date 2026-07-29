@@ -88,6 +88,31 @@ function App() {
   const [assigneeId, setAssigneeId] = useState('');
   const [adjudicationAction, setAdjudicationAction] = useState('APPROVE');
   const [adjudicationNotes, setAdjudicationNotes] = useState('');
+
+  // Live Username Availability State for Registration
+  const [usernameAvailability, setUsernameAvailability] = useState({ isChecking: false, taken: false, checkedVal: '' });
+
+  useEffect(() => {
+    if (isLoginMode || !loginUsername || loginUsername.trim().length < 2) {
+      setUsernameAvailability({ isChecking: false, taken: false, checkedVal: '' });
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setUsernameAvailability(prev => ({ ...prev, isChecking: true }));
+      try {
+        const res = await fetch(`${API_BASE}/check-username?username=${encodeURIComponent(loginUsername.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setUsernameAvailability({ isChecking: false, taken: !data.available, checkedVal: loginUsername.trim() });
+        }
+      } catch (err) {
+        setUsernameAvailability({ isChecking: false, taken: false, checkedVal: '' });
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [loginUsername, isLoginMode]);
   
   // Create Employee Form State
   const [empName, setEmpName] = useState('');
@@ -873,6 +898,19 @@ function App() {
                 } 
                 required 
               />
+              {!isLoginMode && loginUsername.trim().length >= 2 && (
+                <div style={{ marginTop: '4px', fontSize: '11px' }}>
+                  {usernameAvailability.isChecking ? (
+                    <span style={{ color: '#64748b' }}>Checking availability...</span>
+                  ) : usernameAvailability.checkedVal === loginUsername.trim() ? (
+                    usernameAvailability.taken ? (
+                      <span style={{ color: '#ef4444', fontWeight: 'bold' }}>❌ Username / Email is already taken</span>
+                    ) : (
+                      <span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓ Username is available</span>
+                    )
+                  ) : null}
+                </div>
+              )}
             </div>
             
             {!isLoginMode && (

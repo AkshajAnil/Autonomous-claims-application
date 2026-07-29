@@ -264,6 +264,15 @@ def verify_identity_card(full_name: str, card_bytes: bytes, mime_type: str) -> b
     return False
 
 
+@app.get("/check-username")
+def check_username_availability(username: str, db: Session = Depends(get_db)):
+    clean = username.strip().lower()
+    if not clean:
+        return {"available": True}
+    taken = db.query(User).filter((User.username.ilike(clean)) | (User.email.ilike(clean))).first() is not None
+    return {"available": not taken, "username": clean}
+
+
 @app.post("/register", response_model=UserOut)
 async def register(
     username: str = Form(...),
@@ -274,12 +283,14 @@ async def register(
     db: Session = Depends(get_db)
 ):
     clean_username = username.strip().lower()
-    if db.query(User).filter(User.username == clean_username).first():
-        raise HTTPException(status_code=400, detail="Username already registered")
+    if db.query(User).filter(User.username.ilike(clean_username)).first():
+        raise HTTPException(status_code=400, detail="Username already registered.")
         
     clean_email = email.strip().lower() if email and email.strip() else (clean_username if "@" in clean_username else None)
-    if clean_email and db.query(User).filter(User.email == clean_email).first():
-        raise HTTPException(status_code=400, detail="Email address is already registered.")
+    if clean_email:
+        existing_email = db.query(User).filter((User.email.ilike(clean_email)) | (User.username.ilike(clean_email))).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="An account with this email address already exists. Please log in or use a different email.")
 
     # Enforce Aadhaar/PAN Card PDF Upload constraint
     if id_card.content_type != "application/pdf":
@@ -737,8 +748,11 @@ def create_employee(
             username = f"{base_username}{idx}"
             idx += 1
         
-    if db.query(User).filter(User.email == req.email).first():
-        raise HTTPException(status_code=400, detail="An employee with this email already exists.")
+    clean_emp_email = req.email.strip().lower() if req.email else ""
+    if clean_emp_email:
+        existing_emp = db.query(User).filter((User.email.ilike(clean_emp_email)) | (User.username.ilike(clean_emp_email))).first()
+        if existing_emp:
+            raise HTTPException(status_code=400, detail=f"An account with email '{clean_emp_email}' already exists.")
         
     # Generate Customer/Employee ID prefix
     while True:
