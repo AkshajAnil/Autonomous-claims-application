@@ -784,7 +784,8 @@ def create_employee(
 
 
 @app.get("/setup-password/verify")
-def verify_setup_token(token: str, db: Session = Depends(get_db)):
+def verify_setup_token(token: str, response: Response, db: Session = Depends(get_db)):
+    response.delete_cookie("access_token")
     user = db.query(User).filter(User.reset_token == token).first()
     if not user or (user.reset_token_expires_at and user.reset_token_expires_at < datetime.datetime.utcnow()):
         raise HTTPException(status_code=400, detail="Invalid or expired password activation token.")
@@ -797,7 +798,8 @@ def verify_setup_token(token: str, db: Session = Depends(get_db)):
 
 
 @app.post("/setup-password")
-def setup_password(req: TokenResetPasswordRequest, db: Session = Depends(get_db)):
+def setup_password(req: TokenResetPasswordRequest, response: Response, db: Session = Depends(get_db)):
+    response.delete_cookie("access_token")
     if len(req.new_password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters long.")
 

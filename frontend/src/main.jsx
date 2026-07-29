@@ -246,13 +246,17 @@ function App() {
       }
       setTokenSuccess('Password set successfully! Redirecting to login...');
       setTimeout(() => {
-        if (tokenUserInfo && tokenUserInfo.role) {
-          setLoginRoleTab(tokenUserInfo.role);
+        const targetRole = tokenUserInfo?.role || 'employee';
+        const targetUsername = tokenUserInfo?.username || '';
+        setUser(null);
+        setLoginRoleTab(targetRole === 'customer' ? 'customer' : 'employee');
+        if (targetUsername) {
+          setLoginUsername(targetUsername);
         }
         window.history.replaceState({}, document.title, window.location.pathname);
         setTokenFromUrl('');
         setTokenUserInfo(null);
-      }, 2000);
+      }, 1500);
     } catch (err) {
       setTokenError(err.message);
     }
@@ -262,10 +266,12 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('setup_token') || params.get('token');
     if (token) {
+      setUser(null);
       setTokenFromUrl(token);
       verifyToken(token);
+    } else {
+      checkAuth();
     }
-    checkAuth();
   }, []);
 
   async function loadClaims() {
