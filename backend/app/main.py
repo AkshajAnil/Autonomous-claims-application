@@ -15,9 +15,9 @@ from app.config import get_settings
 from app.database import SessionLocal, get_db, init_db
 from app.models import Claim, Evidence, User, AuditLog, ClaimStatus
 from app.repository import claim_with_children, log_audit
-from app.schemas import ClaimOut, UserCreate, UserOut, AuditLogOut, AdjudicationRequest, EmployeeCreate, PasswordChangeRequest, SelfResetPasswordRequest, TokenResetPasswordRequest
+from app.schemas import ClaimOut, UserCreate, UserOut, AuditLogOut, AdjudicationRequest, EmployeeCreate, PasswordChangeRequest, SelfResetPasswordRequest, TokenResetPasswordRequest, SwitchRoleRequest
 from app.storage import assert_storage_ready, save_upload
-from app.auth import get_password_hash, verify_password, create_access_token, logout_user, get_current_user
+from app.auth import get_password_hash, verify_password, create_access_token, logout_user, get_current_user, has_role
 
 settings = get_settings()
 app = FastAPI(title="Autonomous Claims Agent Backend")
@@ -355,9 +355,19 @@ def login(user_in: UserCreate, response: Response, db: Session = Depends(get_db)
         samesite="lax",
     )
     
+    # Set active_role based on portal and assigned roles
+    if user_in.expected_role and user_in.expected_role.lower() == "customer":
+        user.active_role = "customer"
+    else:
+        # Employee portal: prefer adjuster if assigned, else first staff role
+        staff_roles = [r for r in user.roles_list if r in ("adjuster", "admin")]
+        user.active_role = staff_roles[0] if staff_roles else user.roles_list[0]
+    db.commit()
+    db.refresh(user)
+    
     # Log Audit: Role-Specific Login
     role_label = "Admin" if "admin" in user.roles_list else ("Employee" if "adjuster" in user.roles_list else "User")
-    log_audit(db, user.id, f"{role_label} Login", {"username": user.username, "role": user.role})
+    log_audit(db, user.id, f"{role_label} Login", {"username": user.username, "role": user.role, "active_role": user.active_role})
     
     user.roles = user.roles_list
     return user
@@ -420,6 +430,19 @@ def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@app.post("/switch-role", response_model=UserOut)
+def switch_role(req: SwitchRoleRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Switch the active portal role for a multi-role employee."""
+    if req.role not in current_user.roles_list:
+        raise HTTPException(status_code=403, detail=f"You do not have the '{req.role}' role assigned.")
+    current_user.active_role = req.role
+    db.commit()
+    db.refresh(current_user)
+    log_audit(db, current_user.id, "Role Switch", {"new_active_role": req.role})
+    current_user.roles = current_user.roles_list
+    return current_user
+
+
 from app.schemas import PredictRequest, PredictResponse
 
 @app.post("/predict", response_model=PredictResponse)
@@ -450,7 +473,7 @@ async def create_claim(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role != "customer":
+    if not has_role(current_user, "customer"):
         raise HTTPException(status_code=403, detail="Only customers can submit new claims.")
     if not current_user.is_active:
         raise HTTPException(status_code=403, detail="Deactivated account.")
@@ -516,12 +539,14 @@ async def create_claim(
 @app.get("/claims", response_model=List[ClaimOut])
 def list_claims(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     auto_assign_claims(db)
-    if current_user.role == "customer":
+    # Use active_role for data scoping (determines which portal view's data to return)
+    scope = current_user.active_role or current_user.roles_list[0]
+    if scope == "customer":
         return db.query(Claim).filter(Claim.user_id == current_user.id).order_by(Claim.created_at.desc()).all()
-    elif current_user.role == "adjuster":
+    elif scope == "adjuster":
         # Adjusters see claims assigned strictly to them
         return db.query(Claim).filter(Claim.assigned_adjuster_id == current_user.id).order_by(Claim.created_at.desc()).all()
-    elif current_user.role == "admin":
+    elif scope == "admin":
         return db.query(Claim).order_by(Claim.created_at.desc()).all()
     return []
 
@@ -532,7 +557,7 @@ def get_claim(claim_id: str, db: Session = Depends(get_db), current_user: User =
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
         
-    if current_user.role == "customer" and claim.user_id != current_user.id:
+    if has_role(current_user, "customer") and not has_role(current_user, "adjuster") and not has_role(current_user, "admin") and claim.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied.")
         
     return claim
@@ -543,7 +568,7 @@ def claim_events(claim_id: str, db: Session = Depends(get_db), current_user: Use
     claim = claim_with_children(db, claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
-    if current_user.role == "customer" and claim.user_id != current_user.id:
+    if has_role(current_user, "customer") and not has_role(current_user, "adjuster") and not has_role(current_user, "admin") and claim.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Access denied.")
     return StreamingResponse(stream_events(SessionLocal, claim_id), media_type="text/event-stream")
 
@@ -555,14 +580,14 @@ def adjudicate_claim(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in {"adjuster", "admin"}:
+    if not has_role(current_user, "adjuster") and not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Access denied. Only Adjusters or Admins can override decisions.")
         
     claim = claim_with_children(db, claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
         
-    if current_user.role == "adjuster" and claim.assigned_adjuster_id != current_user.id:
+    if has_role(current_user, "adjuster") and not has_role(current_user, "admin") and claim.assigned_adjuster_id != current_user.id:
         raise HTTPException(status_code=403, detail="Claim is not assigned to you.")
     old_status = claim.status
     meta = dict(claim.verification_metadata or {})
@@ -623,15 +648,15 @@ def assign_claim(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Only Admins can assign claims to adjusters.")
         
     claim = claim_with_children(db, claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Claim not found")
         
-    adjuster = db.query(User).filter(User.id == adjuster_id, User.role == "adjuster").first()
-    if not adjuster:
+    adjuster = db.query(User).filter(User.id == adjuster_id).first()
+    if not adjuster or not has_role(adjuster, "adjuster"):
         raise HTTPException(status_code=404, detail="Selected Adjuster not found.")
         
     # Check if this is an initial assignment or a reassignment
@@ -659,7 +684,7 @@ def assign_claim(
 
 @app.get("/admin/users", response_model=List[UserOut])
 def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if "admin" not in current_user.roles_list and current_user.role != "admin":
+    if not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Only Admins can access user directories.")
     users = db.query(User).order_by(User.created_at.desc()).all()
     for u in users:
@@ -677,7 +702,7 @@ def create_employee(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if "admin" not in current_user.roles_list and current_user.role != "admin":
+    if not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Only Admins can create employee profiles.")
         
     if req.role not in {"adjuster", "admin", "adjuster,admin"}:
@@ -793,7 +818,7 @@ def update_user_status(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Only Admins can activate or deactivate accounts.")
         
     if user_id == current_user.id and not is_active:
@@ -803,8 +828,8 @@ def update_user_status(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found.")
         
-    if target_user.role == "admin" and not is_active:
-        active_admins = db.query(User).filter(User.role == "admin", User.is_active == True).count()
+    if has_role(target_user, "admin") and not is_active:
+        active_admins = db.query(User).filter(User.role.contains("admin"), User.is_active == True).count()
         if active_admins <= 1:
             raise HTTPException(status_code=400, detail="Deactivation denied. There must be at least one active administrator in the system.")
             
@@ -826,7 +851,7 @@ def delete_user(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Only Admins can delete user accounts.")
         
     if user_id == current_user.id:
@@ -836,8 +861,8 @@ def delete_user(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found.")
         
-    if target_user.role == "admin":
-        active_admins = db.query(User).filter(User.role == "admin").count()
+    if has_role(target_user, "admin"):
+        active_admins = db.query(User).filter(User.role.contains("admin")).count()
         if active_admins <= 1:
             raise HTTPException(status_code=400, detail="Deletion denied. There must be at least one administrator account in the system.")
             
@@ -873,7 +898,7 @@ def admin_reset_password(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "admin":
+    if not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Only Admins can trigger password resets.")
         
     user = db.query(User).filter(User.id == user_id).first()
@@ -908,16 +933,20 @@ def admin_reset_password(
 
 @app.get("/admin/audit-logs", response_model=List[AuditLogOut])
 def get_audit_logs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "admin":
+    if not has_role(current_user, "admin"):
         raise HTTPException(status_code=403, detail="Access denied. Audit logs are restricted to Administrators.")
     return db.query(AuditLog).order_by(AuditLog.created_at.desc()).all()
 
 
 @app.get("/adjusters", response_model=List[UserOut])
 def list_adjusters(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role not in {"admin", "adjuster"}:
+    if not has_role(current_user, "admin") and not has_role(current_user, "adjuster"):
         raise HTTPException(status_code=403, detail="Access denied.")
-    return db.query(User).filter(User.role == "adjuster").all()
+    # Return all users who have 'adjuster' in their role string (including multi-role)
+    adjusters = db.query(User).filter(User.role.contains("adjuster")).all()
+    for a in adjusters:
+        a.roles = a.roles_list
+    return adjusters
 
 
 @app.post("/admin/users/{user_id}/role", response_model=UserOut)
@@ -927,8 +956,8 @@ def update_user_role(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role not in {"admin", "adjuster"}:
-        raise HTTPException(status_code=403, detail="Only Admins and Adjusters can modify user roles.")
+    if not has_role(current_user, "admin"):
+        raise HTTPException(status_code=403, detail="Only Administrators can modify user roles.")
         
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

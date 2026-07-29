@@ -29,6 +29,7 @@ class UserOut(BaseModel):
     customer_id: str
     role: str
     roles: list[str] = []
+    active_role: str | None = None
     full_name: str
     is_identity_verified: bool
     is_active: bool
@@ -222,3 +223,7 @@ class SelfResetPasswordRequest(BaseModel):
 class TokenResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+
+
+class SwitchRoleRequest(BaseModel):
+    role: str

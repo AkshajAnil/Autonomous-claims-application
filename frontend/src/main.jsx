@@ -62,7 +62,7 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      setActiveRole(user.role || (user.roles && user.roles[0]) || 'customer');
+      setActiveRole(user.active_role || user.role || (user.roles && user.roles[0]) || 'customer');
     }
   }, [user]);
 
@@ -310,18 +310,19 @@ function App() {
     }
   }
 
+  // Reload data when activeRole changes (handles both login and role switch)
   useEffect(() => {
     if (user && !mustResetPassword) {
       loadClaims();
-      if (user.role === 'admin') {
+      if (activeRole === 'admin') {
         loadAdjusters();
         loadAuditLogs();
         loadAllUsers();
-      } else if (user.role === 'adjuster') {
+      } else if (activeRole === 'adjuster') {
         loadAdjusters();
       }
     }
-  }, [user, mustResetPassword]);
+  }, [user, mustResetPassword, activeRole]);
 
   useEffect(() => {
     if (!selectedId || !user || mustResetPassword) return undefined;
@@ -346,7 +347,7 @@ function App() {
     source.addEventListener('done', () => {
       source.close();
       loadClaims();
-      if (user.role === 'admin') {
+      if (activeRole === 'admin') {
         loadAuditLogs();
       }
     });
@@ -408,7 +409,7 @@ function App() {
       const updated = await response.json();
       setClaims((current) => current.map(c => c.id === updated.id ? updated : c));
       setAdjudicationNotes('');
-      if (user.role === 'admin') {
+      if (activeRole === 'admin') {
         loadAuditLogs();
       }
     } catch (e) {
@@ -635,7 +636,7 @@ function App() {
         setAuthError('Registration successful. Please log in.');
       } else {
         setUser(resData);
-        setActiveRole(resData.role || (resData.roles && resData.roles[0]) || 'customer');
+        setActiveRole(resData.active_role || resData.role || (resData.roles && resData.roles[0]) || 'customer');
         if (resData.must_change_password) {
           setMustResetPassword(true);
         } else {
@@ -932,15 +933,32 @@ function App() {
             <ShieldCheck size={28} style={{ color: 'var(--mono-primary)' }} />
             <h1 style={{ fontSize: '24px' }}>Claims Guard terminal</h1>
           </div>
-          {user && user.role !== 'customer' ? (
+          {user && activeRole !== 'customer' ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
               <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>EMPLOYEE IDENTITY: {user.full_name || user.username}</span>
               {(user.roles && user.roles.length > 1) ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                  <span style={{ fontSize: '11px', color: '#0f172a', fontWeight: 'bold' }}>Current Role:</span>
+                  <span style={{ fontSize: '11px', color: '#0f172a', fontWeight: 'bold' }}>Active Portal:</span>
                   <select 
                     value={activeRole} 
-                    onChange={(e) => setActiveRole(e.target.value)}
+                    onChange={async (e) => {
+                      const newRole = e.target.value;
+                      try {
+                        const resp = await fetch(`${API_BASE}/switch-role`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({ role: newRole })
+                        });
+                        if (resp.ok) {
+                          const data = await resp.json();
+                          setUser(data);
+                          setActiveRole(newRole);
+                        }
+                      } catch (err) {
+                        console.error('Role switch failed:', err);
+                      }
+                    }}
                     style={{
                       padding: '3px 8px',
                       fontSize: '11px',
@@ -952,15 +970,12 @@ function App() {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="adjuster">Claims Adjuster</option>
-                    <option value="admin">System Administrator</option>
-                    {(user.roles && user.roles.length > 1) || (user.role && user.role.includes(',')) ? (
-                      <option value="adjuster,admin">Multi-Role (Adjuster & Administrator)</option>
-                    ) : null}
+                    {user.roles.includes('adjuster') && <option value="adjuster">Claims Adjuster</option>}
+                    {user.roles.includes('admin') && <option value="admin">System Administrator</option>}
                   </select>
                 </div>
               ) : (
-                <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>ROLE: {activeRole.toUpperCase()}</span>
+                <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>ROLE: {activeRole === 'admin' ? 'SYSTEM ADMINISTRATOR' : activeRole === 'adjuster' ? 'CLAIMS ADJUSTER' : activeRole.toUpperCase()}</span>
               )}
             </div>
           ) : (
@@ -984,7 +999,7 @@ function App() {
 
 
       {/* CUSTOMER PORTAL */}
-      {user.role === 'customer' && (
+      {activeRole === 'customer' && (
         <section className="portal-layout">
           <aside className="portal-sidebar panel">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--mono-text)', paddingBottom: '8px' }}>
@@ -1211,7 +1226,7 @@ function App() {
                           <span className="eyebrow" style={{ color: '#6b21a8', display: 'block', marginBottom: '4px' }}>📋 Recommended Next Actions</span>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             {selected.verification_metadata.next_actions.map((act, idx) => {
-                              const displayAct = (user?.role === 'customer' || !user || user.role !== 'adjuster') && 
+                              const displayAct = (activeRole === 'customer') && 
                                 (act.includes('Notify') || act.includes('Policyholder'))
                                 ? "Check Settlement Transfer Status"
                                 : act;
@@ -1288,7 +1303,7 @@ function App() {
                         </div>
                       )}
 
-                      {user && (user.role === 'adjuster' || user.role === 'admin') && (() => {
+                      {user && (activeRole === 'adjuster' || activeRole === 'admin') && (() => {
                         const renderCheck = (label, key) => {
                           const status = selected[`${key}_verification_status`] || 'NOT_REQUIRED';
                           const meta = (selected.verification_metadata && 
@@ -1356,6 +1371,49 @@ function App() {
                         );
                       })()}
 
+                      {/* Evidence-Led Investigation Summary (MCP Tool Outputs) */}
+                      {selected.verification_metadata && (
+                        <div style={{ border: '2px solid #0f172a', padding: '12px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span className="eyebrow" style={{ color: '#0f172a', fontSize: '11px' }}>🔍 Evidence-Led Investigation Summary (MCP Tool Outputs)</span>
+                          
+                          {/* Policy RAG Search Findings */}
+                          {(selected.verification_metadata.policy_rag || selected.verification_metadata.policy_search) && (
+                            <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '4px' }}>
+                              <strong style={{ fontSize: '12px', color: '#0f172a' }}>📖 Policy Coverage Analysis (Qdrant RAG)</strong>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#334155', lineHeight: '1.4' }}>
+                                {typeof (selected.verification_metadata.policy_rag || selected.verification_metadata.policy_search) === 'string'
+                                  ? (selected.verification_metadata.policy_rag || selected.verification_metadata.policy_search)
+                                  : JSON.stringify(selected.verification_metadata.policy_rag || selected.verification_metadata.policy_search)}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Visual Forensics & Image Assessment */}
+                          {(selected.verification_metadata.visual_damage || selected.verification_metadata.visual_assessment) && (
+                            <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '4px' }}>
+                              <strong style={{ fontSize: '12px', color: '#0f172a' }}>📷 Visual Forensics & Damage Assessment (Gemini Vision)</strong>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#334155', lineHeight: '1.4' }}>
+                                {typeof (selected.verification_metadata.visual_damage || selected.verification_metadata.visual_assessment) === 'string'
+                                  ? (selected.verification_metadata.visual_damage || selected.verification_metadata.visual_assessment)
+                                  : JSON.stringify(selected.verification_metadata.visual_damage || selected.verification_metadata.visual_assessment)}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Claimant History */}
+                          {selected.verification_metadata.claim_history && (
+                            <div style={{ background: '#fff', border: '1px solid #cbd5e1', padding: '8px 10px', borderRadius: '4px' }}>
+                              <strong style={{ fontSize: '12px', color: '#0f172a' }}>📊 Claimant History & Prior Pattern Analysis</strong>
+                              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#334155', lineHeight: '1.4' }}>
+                                {typeof selected.verification_metadata.claim_history === 'string'
+                                  ? selected.verification_metadata.claim_history
+                                  : JSON.stringify(selected.verification_metadata.claim_history)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {selected.adjuster_notes && (
                         <div style={{ border: '2px solid var(--mono-text-dark)', padding: '12px', background: '#fff' }}>
                           <span className="eyebrow" style={{ color: 'var(--mono-text-dark)' }}>Claims Adjuster Notes</span>
@@ -1416,7 +1474,7 @@ function App() {
       )}
 
       {/* ADJUSTER DASHBOARD */}
-      {user.role === 'adjuster' && (
+      {activeRole === 'adjuster' && (
         <section className="portal-layout">
           <aside className="portal-sidebar panel">
             <h2 style={{ borderBottom: '1px solid var(--mono-text)', paddingBottom: '8px' }}>Assigned Queue</h2>
@@ -1816,7 +1874,7 @@ function App() {
       )}
 
       {/* ADMIN PANEL */}
-      {user.role === 'admin' && (
+      {activeRole === 'admin' && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="admin-tabs">
             {[
@@ -1883,7 +1941,7 @@ function App() {
                     style={{ padding: '5px 8px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#fff' }}
                   >
                     <option value="">-- All Assigned Adjusters --</option>
-                    {allUsers.filter(u => u.role === 'adjuster').map(adj => (
+                    {allUsers.filter(u => (u.roles || [u.role]).some(r => r === 'adjuster')).map(adj => (
                       <option key={adj.id} value={adj.id}>⚖️ {adj.full_name} ({adj.username})</option>
                     ))}
                   </select>
@@ -1988,7 +2046,7 @@ function App() {
                             required
                           >
                             <option value="">-- Choose Adjuster --</option>
-                            {allUsers.filter(u => u.role === 'adjuster').map((adj) => (
+                            {allUsers.filter(u => (u.roles || [u.role]).some(r => r === 'adjuster')).map((adj) => (
                               <option key={adj.id} value={adj.id}>{adj.full_name} ({adj.username})</option>
                             ))}
                           </select>
@@ -2078,7 +2136,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allUsers.filter(u => u.role === 'admin').map((u) => (
+                    {allUsers.filter(u => (u.roles || [u.role]).some(r => r === 'admin')).map((u) => (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>
@@ -2200,7 +2258,7 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allUsers.filter(u => u.role === 'customer').map((u) => (
+                    {allUsers.filter(u => (u.roles || [u.role]).every(r => r === 'customer')).map((u) => (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--mono-surface-dark)' }}>
                         <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.customer_id}</td>
                         <td style={{ padding: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</td>

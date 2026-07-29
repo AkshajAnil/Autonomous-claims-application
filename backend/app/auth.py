@@ -130,3 +130,12 @@ def get_current_user(token: str = Depends(get_token_from_cookie), db: Session = 
     if user is None:
         raise credentials_exception
     return user
+
+
+def has_role(user, role: str) -> bool:
+    """Check if user has a specific role in their assigned roles.
+    
+    This is the single source of truth for authorization checks.
+    Use this instead of exact-string comparisons like user.role == 'admin'.
+    """
+    return role in user.roles_list
