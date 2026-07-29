@@ -513,10 +513,19 @@ function App() {
     }
   }
 
-  async function handleResetPassword(userId, username) {
+  async function handleResetPassword(userId, username, existingEmail) {
     setError('');
+    let targetEmail = existingEmail;
+    if (!targetEmail || targetEmail.endsWith('@company.com')) {
+      const input = prompt(`Enter recipient email address to send password reset link for account "${username}":`, targetEmail && !targetEmail.endsWith('@company.com') ? targetEmail : '');
+      if (input === null) return; // User cancelled
+      if (input.trim()) {
+        targetEmail = input.trim();
+      }
+    }
     try {
-      const response = await fetch(`${API_BASE}/admin/users/${userId}/reset-password`, {
+      const emailQuery = targetEmail ? `?target_email=${encodeURIComponent(targetEmail)}` : '';
+      const response = await fetch(`${API_BASE}/admin/users/${userId}/reset-password${emailQuery}`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -530,6 +539,7 @@ function App() {
         type: 'success',
         resetUrl: data.reset_url
       });
+      loadAllUsers();
       loadAuditLogs();
     } catch (e) {
       setError(e.message);
@@ -2203,7 +2213,7 @@ function App() {
                               <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                                 Delete
                               </button>
-                              <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                              <button onClick={() => handleResetPassword(u.id, u.username, u.email)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                                 Reset
                               </button>
                             </div>
@@ -2271,7 +2281,7 @@ function App() {
                             <button onClick={() => handleDeleteUser(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-danger)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Delete
                             </button>
-                            <button onClick={() => handleResetPassword(u.id, u.username)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
+                            <button onClick={() => handleResetPassword(u.id, u.username, u.email)} style={{ padding: '2px 6px', fontSize: '11px', background: 'var(--mono-secondary)', color: '#fff', border: 'none', cursor: 'pointer', borderRadius: '3px' }}>
                               Reset
                             </button>
                           </div>

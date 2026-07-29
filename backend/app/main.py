@@ -912,6 +912,7 @@ def delete_user(
 def admin_reset_password(
     user_id: str, 
     background_tasks: BackgroundTasks,
+    target_email: str | None = None,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
@@ -922,6 +923,9 @@ def admin_reset_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
         
+    if target_email and target_email.strip() and "@" in target_email:
+        user.email = target_email.strip().lower()
+
     reset_token = secrets.token_urlsafe(32)
     user.reset_token = reset_token
     user.reset_token_expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
