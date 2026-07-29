@@ -883,6 +883,10 @@ function App() {
                   <input name="full_name" placeholder="John Doe" required />
                 </div>
                 <div className="input-group">
+                  <label>Email Address</label>
+                  <input name="email" type="email" placeholder="john.doe@gmail.com" required />
+                </div>
+                <div className="input-group">
                   <label>Identity proof (PDF format strictly enforced)</label>
                   <label className="file-input">
                     <FileImage size={18} />

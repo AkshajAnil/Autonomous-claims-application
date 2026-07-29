@@ -270,11 +270,17 @@ async def register(
     full_name: str = Form(...),
     password: str = Form(...),
     id_card: UploadFile = File(...),
+    email: str | None = Form(None),
     db: Session = Depends(get_db)
 ):
-    if db.query(User).filter(User.username == username).first():
+    clean_username = username.strip().lower()
+    if db.query(User).filter(User.username == clean_username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
         
+    clean_email = email.strip().lower() if email and email.strip() else (clean_username if "@" in clean_username else None)
+    if clean_email and db.query(User).filter(User.email == clean_email).first():
+        raise HTTPException(status_code=400, detail="Email address is already registered.")
+
     # Enforce Aadhaar/PAN Card PDF Upload constraint
     if id_card.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed for identity proof verification.")
@@ -300,14 +306,14 @@ async def register(
             break
 
     user = User(
-        username=username,
+        username=clean_username,
         password_hash=get_password_hash(password),
         customer_id=cust_id,
         role="customer",
         full_name=full_name,
         id_card_url=id_card_url,
         is_identity_verified=True,
-        email=username if "@" in username else f"{username}@company.com",
+        email=clean_email or f"{clean_username}@company.com",
         must_change_password=False,
         is_active=True
     )
