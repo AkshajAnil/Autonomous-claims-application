@@ -227,6 +227,8 @@ function App() {
       }
     } catch (e) {
       setTokenError(e.message);
+    } finally {
+      setIsAuthChecking(false);
     }
   }
 
