@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000';
 
 function formatEmail(email) {
   if (!email) return '-';
@@ -171,7 +171,17 @@ function App() {
     [claims, selectedId],
   );
 
+  const hasAdminClaimSearch = Boolean(
+    filterCustId.trim() ||
+    filterClaimantName.trim() ||
+    filterClaimId.trim() ||
+    filterAdjusterId
+  );
+
   const filteredAdminClaims = useMemo(() => {
+    if (!hasAdminClaimSearch) {
+      return [];
+    }
     return claims.filter((c) => {
       if (filterAdjusterId) {
         const targetAdj = allUsers.find(u => u.id === filterAdjusterId);
@@ -187,10 +197,24 @@ function App() {
       }
       if (filterCustId.trim()) {
         const qCust = filterCustId.toLowerCase().trim();
-        const userCustId = c.user?.customer_id?.toLowerCase() || '';
+        const claimantName = c.claimant_name?.toLowerCase().trim() || '';
+        const claimUser = c.user || allUsers.find(u => u.id === c.user_id);
+        const matchingNamedUsers = allUsers.filter(u => {
+          const userFullName = u.full_name?.toLowerCase().trim() || '';
+          const userUsername = u.username?.toLowerCase().trim() || '';
+          return claimantName && (userFullName === claimantName || userUsername === claimantName);
+        });
+        const userCustId = claimUser?.customer_id?.toLowerCase() || '';
+        const username = claimUser?.username?.toLowerCase() || '';
+        const fullName = claimUser?.full_name?.toLowerCase() || '';
         const userId = c.user_id?.toLowerCase() || '';
         const adjCustId = c.assigned_adjuster?.customer_id?.toLowerCase() || '';
-        if (!userCustId.includes(qCust) && !userId.includes(qCust) && !adjCustId.includes(qCust)) return false;
+        const namedUserMatch = matchingNamedUsers.some(u =>
+          (u.customer_id || '').toLowerCase().includes(qCust) ||
+          (u.id || '').toLowerCase().includes(qCust) ||
+          (u.username || '').toLowerCase().includes(qCust)
+        );
+        if (!userCustId.includes(qCust) && !username.includes(qCust) && !fullName.includes(qCust) && !userId.includes(qCust) && !adjCustId.includes(qCust) && !namedUserMatch) return false;
       }
       if (filterClaimantName.trim()) {
         const qName = filterClaimantName.toLowerCase().trim();
@@ -209,7 +233,7 @@ function App() {
       }
       return true;
     });
-  }, [claims, filterAdjusterId, filterCustId, filterClaimantName, filterClaimId]);
+  }, [claims, allUsers, hasAdminClaimSearch, filterAdjusterId, filterCustId, filterClaimantName, filterClaimId]);
 
   // Activation / Setup Token Link State
   const [tokenFromUrl, setTokenFromUrl] = useState('');
@@ -975,12 +999,13 @@ function App() {
     );
   }
 
+  const scoredClaims = claims.filter(c => c.risk_score !== null && c.risk_score !== undefined);
   const analytics = {
     total: claims.length,
     approved: claims.filter(c => c.status === 'APPROVED').length,
     underReview: claims.filter(c => c.status === 'UNDER_REVIEW').length,
     processing: claims.filter(c => c.status === 'PROCESSING' || c.status === 'SUBMITTED').length,
-    avgRiskScore: claims.length ? Math.round(claims.reduce((acc, c) => acc + (c.risk_score || 0), 0) / claims.length) : 0
+    avgRiskScore: scoredClaims.length ? Math.round(scoredClaims.reduce((acc, c) => acc + c.risk_score, 0) / scoredClaims.length) : null
   };
 
   return (
@@ -1256,14 +1281,14 @@ function App() {
                         </div>
                         <div>
                           <span>Trust Score</span>
-                          <strong style={{ color: (selected.risk_score || 50) >= 70 ? 'var(--mono-success)' : (selected.risk_score || 50) >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)' }}>
-                            {selected.risk_score ?? 50}/100
+                          <strong style={{ color: selected.risk_score == null ? 'var(--mono-text)' : (selected.risk_score >= 70 ? 'var(--mono-success)' : selected.risk_score >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)') }}>
+                            {selected.risk_score == null ? 'Agent Review' : `${selected.risk_score}/100`}
                           </strong>
                         </div>
                         <div>
-                          <span>Fraud Risk Level</span>
-                          <strong style={{ color: (selected.risk_score || 50) >= 70 ? 'var(--mono-success)' : (selected.risk_score || 50) >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)' }}>
-                            {100 - (selected.risk_score ?? 50)}%
+                          <span>Risk Basis</span>
+                          <strong style={{ color: selected.risk_score == null ? 'var(--mono-text)' : (selected.risk_score >= 70 ? 'var(--mono-success)' : selected.risk_score >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)') }}>
+                            {selected.risk_score == null ? 'Evidence-Based' : `${100 - selected.risk_score}%`}
                           </strong>
                         </div>
                       </div>
@@ -1318,46 +1343,6 @@ function App() {
                         <div>
                           <span className="eyebrow" style={{ color: 'var(--mono-text)' }}>AI Investigation Summary</span>
                           <p style={{ marginTop: '4px', fontSize: '13px', lineHeight: '1.4' }}>{selected.investigation_summary}</p>
-                        </div>
-                      )}
-
-                      {selected.shap_explanations && selected.shap_explanations.length > 0 && (
-                        <div style={{ border: '2px solid var(--mono-secondary)', padding: '12px', background: 'rgba(0, 166, 244, 0.04)', borderLeft: '4px solid var(--mono-secondary)' }}>
-                          <span className="eyebrow" style={{ color: 'var(--mono-secondary)' }}>AI Risk Factors Explained</span>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                            {selected.shap_explanations.map((featObj, idx) => {
-                              const feat = typeof featObj === 'string' ? featObj : featObj.feature;
-                              const impact = typeof featObj === 'string' ? null : featObj.impact;
-                              const explanations = {
-                                "claim_amount": "Claim Payout Amount: Evaluates if the requested payout is unusually high for this category.",
-                                "previous_claims": "Claim History: Looks at the frequency of past claims filed by this user.",
-                                "policy_age": "Policy Age: Checks if the insurance policy was purchased right before the incident.",
-                                "customer_tenure": "Account Age: Considers how long the user has been a customer.",
-                                "claim_submission_delay": "Submission Delay: Measures the time lag between the incident and the claim filing.",
-                                "weather_verified": "Weather Verification: Cross-checks local weather reports against the claim details.",
-                                "location_verified": "Location Verification: Validates geolocation data matches the incident report.",
-                                "disaster_verified": "Disaster Alerts: Checks for natural disaster warnings in the region during the incident.",
-                                "image_anomaly_score": "Evidence Authenticity: Scans uploaded photos for digital manipulation or metadata inconsistencies.",
-                                "document_consistency_score": "Document Consistency: Analyzes text and visual consistency across all uploaded paperwork.",
-                                "missing_document_count": "Documentation Completeness: Checks if required proof or verification statements are missing.",
-                                "ocr_consistency_score": "Text Consistency: Cross-checks text found in images against the claim details."
-                              };
-                              
-                              const directionText = impact === null ? "Evaluated" : (impact > 0 ? "Increased Risk" : "Decreased Risk");
-                              const directionColor = impact === null ? "var(--mono-text)" : (impact > 0 ? "var(--mono-danger)" : "var(--mono-success)");
-                              const desc = explanations[feat] || "Structured features contributed to the overall risk evaluation.";
-
-                              return (
-                                <div key={idx} style={{ fontSize: '12px', color: 'var(--mono-text-dark)', padding: '6px 0', borderBottom: idx !== selected.shap_explanations.length - 1 ? '1px solid var(--mono-surface)' : 'none' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                    <strong>{desc.split(':')[0]}</strong>
-                                    <span style={{ color: directionColor, fontWeight: 'bold' }}>{directionText}</span>
-                                  </div>
-                                  <div style={{ color: 'var(--mono-text)' }}>{desc.split(':')[1] || desc}</div>
-                                </div>
-                              );
-                            })}
-                          </div>
                         </div>
                       )}
 
@@ -1539,9 +1524,9 @@ function App() {
             <div className="claims-list-scroll">
               {claims.length === 0 && <p className="muted">No claims currently assigned to you.</p>}
               {claims.map((c) => {
-                const trustScore = c.risk_score ?? 50;
-                const riskLabel = trustScore >= 70 ? 'LOW RISK' : trustScore >= 40 ? 'MED RISK' : 'HIGH RISK';
-                const riskColor = trustScore >= 70 ? 'var(--mono-success)' : trustScore >= 40 ? 'var(--mono-warning)' : 'var(--mono-danger)';
+                const trustScore = c.risk_score;
+                const riskLabel = trustScore == null ? 'AGENTIC REVIEW' : trustScore >= 70 ? 'LOW RISK' : trustScore >= 40 ? 'MED RISK' : 'HIGH RISK';
+                const riskColor = trustScore == null ? 'var(--mono-text)' : trustScore >= 70 ? 'var(--mono-success)' : trustScore >= 40 ? 'var(--mono-warning)' : 'var(--mono-danger)';
                 return (
                   <div 
                     key={c.id} 
@@ -1588,17 +1573,17 @@ function App() {
                       </div>
                       <div>
                         <span>Trust Score</span>
-                        <strong style={{ color: selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' ? 'var(--mono-warning)' : (selected.risk_score || 50) >= 70 ? 'var(--mono-success)' : (selected.risk_score || 50) >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)' }}>
-                          {selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' || selected.risk_score === null ? '⏳ Evaluating...' : `${selected.risk_score}/100`}
+                        <strong style={{ color: selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' ? 'var(--mono-warning)' : selected.risk_score == null ? 'var(--mono-text)' : selected.risk_score >= 70 ? 'var(--mono-success)' : selected.risk_score >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)' }}>
+                          {selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' ? 'Evaluating...' : selected.risk_score == null ? 'Agent Review' : `${selected.risk_score}/100`}
                         </strong>
                         <small style={{ fontSize: '9px', display: 'block', color: 'var(--mono-text-dark)', marginTop: '2px' }}>
-                          Fraud Risk: {selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' || selected.risk_score === null ? 'Calculating...' : `${100 - selected.risk_score}%`}
+                          Risk Basis: {selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' ? 'Evaluating...' : selected.risk_score == null ? 'Evidence-Based' : `${100 - selected.risk_score}%`}
                         </small>
                       </div>
                       <div>
-                        <span>Evidence Confidence</span>
+                        <span>Evidence Review</span>
                         <strong style={{ color: 'var(--mono-primary)' }}>
-                          {selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' ? '⏳ Calculating...' : `${selected.verification_metadata?.evidence_confidence ?? 95}%`}
+                          {selected.status === 'PROCESSING' || selected.status === 'SUBMITTED' ? 'Evaluating...' : 'Agentic'}
                         </strong>
                       </div>
                       <div>
@@ -2003,7 +1988,7 @@ function App() {
                       <option key={adj.id} value={adj.id}>⚖️ {adj.full_name} ({adj.username})</option>
                     ))}
                   </select>
-                  {(filterCustId || filterClaimantName || filterClaimId || filterAdjusterId) && (
+                  {hasAdminClaimSearch && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
                       <span style={{ fontSize: '10px', color: '#64748b' }}>Found {filteredAdminClaims.length} matching claim(s)</span>
                       <button 
@@ -2020,7 +2005,7 @@ function App() {
                 <div className="claims-list-scroll">
                   {filteredAdminClaims.length === 0 && (
                     <p className="muted" style={{ fontSize: '12px', padding: '8px 0' }}>
-                      {(filterCustId || filterClaimantName || filterClaimId || filterAdjusterId) ? 'No claims matching applied filters.' : 'No claims registered.'}
+                      {hasAdminClaimSearch ? 'No claims matching applied filters.' : 'Search by Customer ID, Claimant Name, Claim ID, Policy #, or Adjuster to view claims.'}
                     </p>
                   )}
                   {filteredAdminClaims.map((c) => (
@@ -2468,14 +2453,14 @@ function App() {
                   <strong style={{ fontSize: '28px', display: 'block', marginTop: '8px', color: 'var(--mono-warning)' }}>{analytics.underReview}</strong>
                 </div>
                 <div className="panel" style={{ textAlign: 'center', borderColor: 'var(--mono-secondary)' }}>
-                  <span className="eyebrow" style={{ color: 'var(--mono-secondary)' }}>Average Risk Score</span>
-                  <strong style={{ fontSize: '28px', display: 'block', marginTop: '8px', color: 'var(--mono-secondary)' }}>{analytics.avgRiskScore} / 100</strong>
+                  <span className="eyebrow" style={{ color: 'var(--mono-secondary)' }}>Agentic Score Coverage</span>
+                  <strong style={{ fontSize: '28px', display: 'block', marginTop: '8px', color: 'var(--mono-secondary)' }}>{analytics.avgRiskScore == null ? 'Agentic' : `${analytics.avgRiskScore} / 100`}</strong>
                 </div>
               </div>
 
-              {/* Per-User Claims Analytics & Risk Graphs */}
+              {/* Per-User Claims Analytics */}
               <div className="panel">
-                <h3 style={{ fontSize: '14px', textTransform: 'uppercase', marginBottom: '1rem' }}>Per-User Claims Analytics & Risk Graphs</h3>
+                <h3 style={{ fontSize: '14px', textTransform: 'uppercase', marginBottom: '1rem' }}>Per-User Claims Analytics</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {(() => {
                     const userGroupMap = {};
@@ -2499,9 +2484,9 @@ function App() {
                     }
 
                     return userStats.map((u, idx) => {
-                      const avgScore = u.scores.length > 0 ? Math.round(u.scores.reduce((a, b) => a + b, 0) / u.scores.length) : 50;
+                      const avgScore = u.scores.length > 0 ? Math.round(u.scores.reduce((a, b) => a + b, 0) / u.scores.length) : null;
                       const approvalRate = Math.round((u.approved / u.total) * 100);
-                      const barColor = avgScore >= 70 ? 'var(--mono-success)' : avgScore >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)';
+                      const barColor = avgScore == null ? 'var(--mono-text)' : avgScore >= 70 ? 'var(--mono-success)' : avgScore >= 50 ? 'var(--mono-warning)' : 'var(--mono-danger)';
 
                       return (
                         <div key={idx} style={{ border: '1px solid var(--mono-surface-dark)', padding: '12px', background: 'var(--mono-surface)', borderRadius: '4px' }}>
@@ -2510,14 +2495,14 @@ function App() {
                             <span style={{ fontSize: '11px', color: 'var(--mono-text-light)' }}>Total Claims: {u.total} ({u.approved} Approved, {u.inReview} Review, {u.rejected} Rejected)</span>
                           </div>
                           
-                          {/* Visual Graph Bar for Trust Score */}
+                          {/* Visual graph bar for agentic score when available */}
                           <div style={{ marginBottom: '6px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
-                              <span>Average Trust Score Bar</span>
-                              <span style={{ fontWeight: 'bold', color: barColor }}>{avgScore} / 100</span>
+                              <span>Average Agentic Score</span>
+                              <span style={{ fontWeight: 'bold', color: barColor }}>{avgScore == null ? 'Agentic' : `${avgScore} / 100`}</span>
                             </div>
                             <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                              <div style={{ width: `${avgScore}%`, height: '100%', background: barColor, transition: 'width 0.3s ease' }} />
+                              <div style={{ width: `${avgScore ?? 100}%`, height: '100%', background: barColor, transition: 'width 0.3s ease' }} />
                             </div>
                           </div>
 

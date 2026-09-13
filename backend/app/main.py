@@ -1,7 +1,7 @@
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, UploadFile, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 import base64
 import requests
 import re
@@ -95,7 +95,7 @@ def auto_assign_claims(db: Session):
     Strictly caps each adjuster to a maximum of 10 active claims at a time.
     Active claims are those with status NOT in ('APPROVED', 'REJECTED').
     """
-    adjusters = db.query(User).filter(User.role == "adjuster", User.is_active == True).all()
+    adjusters = db.query(User).filter(User.role.contains("adjuster"), User.is_active == True).all()
     if not adjusters:
         return
 
@@ -460,14 +460,6 @@ def switch_role(req: SwitchRoleRequest, db: Session = Depends(get_db), current_u
     return current_user
 
 
-from app.schemas import PredictRequest, PredictResponse
-
-@app.post("/predict", response_model=PredictResponse)
-def predict_fraud(request: PredictRequest):
-    from app.ml_service import predict_fraud_probability
-    return predict_fraud_probability(request.dict())
-
-
 def run_claim_agent_background(claim_id: str) -> None:
     import sys
     import asyncio
@@ -556,15 +548,26 @@ async def create_claim(
 @app.get("/claims", response_model=List[ClaimOut])
 def list_claims(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     auto_assign_claims(db)
+    query = (
+        db.query(Claim)
+        .options(
+            selectinload(Claim.user),
+            selectinload(Claim.assigned_adjuster),
+            selectinload(Claim.reviewed_by_user),
+            selectinload(Claim.evidence),
+            selectinload(Claim.events),
+        )
+        .order_by(Claim.created_at.desc())
+    )
     # Use active_role for data scoping (determines which portal view's data to return)
     scope = current_user.active_role or current_user.roles_list[0]
     if scope == "customer":
-        return db.query(Claim).filter(Claim.user_id == current_user.id).order_by(Claim.created_at.desc()).all()
+        return query.filter(Claim.user_id == current_user.id).all()
     elif scope == "adjuster":
         # Adjusters see claims assigned strictly to them
-        return db.query(Claim).filter(Claim.assigned_adjuster_id == current_user.id).order_by(Claim.created_at.desc()).all()
+        return query.filter(Claim.assigned_adjuster_id == current_user.id).all()
     elif scope == "admin":
-        return db.query(Claim).order_by(Claim.created_at.desc()).all()
+        return query.all()
     return []
 
 

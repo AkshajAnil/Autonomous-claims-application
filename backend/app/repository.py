@@ -51,19 +51,9 @@ def apply_decision(
     db: Session,
     claim_id: str,
     decision_payload: dict,
-    ml_probability: float,
-    shap_explanations: list,
     fallback_reason: str | None = None,
     verifications: dict | None = None,
-    image_anomaly_score: float = 0.0,
-    ocr_consistency_score: float = 1.0,
     evidence: dict | None = None,
-    verification_status: dict | None = None,
-    universal_features: dict | None = None,
-    domain_features: dict | None = None,
-    risk_result: dict | None = None,
-    evidence_confidence: int = 100,
-    decision_result: dict | None = None
 ) -> None:
     claim = db.query(Claim).filter(Claim.id == claim_id).first()
     if not claim:
@@ -72,7 +62,7 @@ def apply_decision(
     # Map AI decision fields (Serializing dict/list objects to JSON strings for Text columns)
     claim.fraud_risk_score = decision_payload.get("fraud_risk_score")
     claim.routing_decision = decision_payload.get("routing_decision")
-    claim.decision_reason = decision_result.get("decision_reason", decision_payload.get("decision_reason")) if decision_result else decision_payload.get("decision_reason")
+    claim.decision_reason = decision_payload.get("decision_reason")
     claim.summary = decision_payload.get("summary")
     
     extracted = decision_payload.get("extracted_info")
@@ -91,10 +81,9 @@ def apply_decision(
     verif_rep = decision_payload.get("verification_report")
     claim.verification_report = json.dumps(verif_rep) if isinstance(verif_rep, (dict, list)) else verif_rep
 
-    # Persistent Adjudication Outputs
-    risk_score = risk_result["risk_score"] if risk_result else decision_payload.get("fraud_risk_score", 50)
-    claim.risk_score = risk_score
-    claim.fraud_probability = ml_probability
+    # Persistent agentic adjudication outputs
+    claim.risk_score = decision_payload.get("fraud_risk_score")
+    claim.fraud_probability = None
     claim.processing_timestamp = datetime.utcnow()
     
     if claim.created_at:
@@ -107,47 +96,31 @@ def apply_decision(
     claim.disaster_verification_status = v_data.get("disaster", {}).get("status", "NOT_REQUIRED")
     claim.event_verification_status = v_data.get("event", {}).get("status", "NOT_REQUIRED")
     
-    # Store complete v4.0 Universal Risk Engine metadata payload
+    # Store complete agentic workflow metadata payload
     metadata_payload = {
         "verifications": v_data,
         "evidence": evidence or {},
-        "verification_status": verification_status or {},
-        "universal_features": universal_features or {},
-        "domain_features": domain_features or {},
-        "risk_result": risk_result or {},
-        "triggered_rules": risk_result.get("triggered_rules", []) if risk_result else [],
-        "positive_rules": risk_result.get("positive_rules", []) if risk_result else [],
-        "negative_rules": risk_result.get("negative_rules", []) if risk_result else [],
-        "risk_score": risk_score,
-        "evidence_confidence": evidence_confidence,
-        "decision_result": decision_result or {},
-        "decision": decision_result.get("decision", "MANUAL_REVIEW") if decision_result else "MANUAL_REVIEW",
-        "reason_code": decision_result.get("reason_code", "NORMAL_EVALUATION") if decision_result else "NORMAL_EVALUATION",
-        "decision_reason": decision_result.get("decision_reason", "") if decision_result else "",
-        "next_actions": decision_result.get("next_actions", []) if decision_result else [],
-        "top_positive": decision_result.get("top_positive", []) if decision_result else [],
-        "top_negative": decision_result.get("top_negative", []) if decision_result else [],
-        "workflow_version": "v1.0",
-        "feature_schema_version": "v1.0",
-        "risk_rules_version": "v1.0"
+        "routing_decision": decision_payload.get("routing_decision"),
+        "decision_reason": decision_payload.get("decision_reason", ""),
+        "next_actions": decision_payload.get("next_actions", []),
+        "workflow_version": "agentic-v1.0",
     }
     claim.verification_metadata = metadata_payload
 
-    # Decision Engine Routing
-    dec_tier = decision_result.get("decision") if decision_result else "MANUAL_REVIEW"
-    if dec_tier == "STRAIGHT_THROUGH":
+    routing = (decision_payload.get("routing_decision") or "").lower()
+    if routing in {"auto_approve", "straight_through", "approve"}:
         claim.status = ClaimStatus.approved.value
-        claim.decision = "Auto Approved (Straight-Through Processing)"
-    elif dec_tier == "REJECT_FRAUD":
+        claim.decision = "Auto Approved (Agentic Workflow)"
+    elif routing in {"reject", "reject_fraud"}:
         claim.status = ClaimStatus.rejected.value
-        claim.decision = "Rejected (High Fraud Risk Flagged)"
+        claim.decision = "Rejected (Agentic Workflow)"
     else:
         claim.status = ClaimStatus.under_review.value
-        claim.decision = decision_result.get("decision_label", "Under Review") if decision_result else "Under Review"
+        claim.decision = "Under Review (Agentic Workflow)"
 
         # Workload-Balanced Auto Assignment (cap of 20 active claims per adjuster)
         from app.models import User
-        adjusters = db.query(User).filter(User.role == "adjuster").all()
+        adjusters = db.query(User).filter(User.role.contains("adjuster"), User.is_active == True).all()
         best_adjuster = None
         min_load = 21
         
@@ -163,26 +136,7 @@ def apply_decision(
                 
         if best_adjuster:
             claim.assigned_adjuster_id = best_adjuster.id
-            claim.decision = f"Assigned to {best_adjuster.full_name} ({decision_result.get('decision_label', 'Review') if decision_result else 'Review'})"
-
-    # Log to FeatureStore dataset
-    from app.feature_store import FeatureStore
-    FeatureStore().log_claim(
-        claim_id=claim_id,
-        evidence=evidence or {},
-        verification_status=verification_status or {},
-        universal_features=universal_features or {},
-        domain_features=domain_features or {},
-        triggered_rules=risk_result.get("triggered_rules", []) if risk_result else [],
-        positive_rules=risk_result.get("positive_rules", []) if risk_result else [],
-        negative_rules=risk_result.get("negative_rules", []) if risk_result else [],
-        risk_score=risk_score,
-        evidence_confidence=evidence_confidence,
-        decision=decision_result.get("decision", "MANUAL_REVIEW") if decision_result else "MANUAL_REVIEW",
-        reason_code=decision_result.get("reason_code", "NORMAL_EVALUATION") if decision_result else "NORMAL_EVALUATION",
-        decision_reason=decision_result.get("decision_reason", "") if decision_result else "",
-        next_actions=decision_result.get("next_actions", []) if decision_result else []
-    )
+            claim.decision = f"Assigned to {best_adjuster.full_name} (Agentic Review)"
 
     db.commit()
     db.refresh(claim)
@@ -190,7 +144,7 @@ def apply_decision(
     # Log audit event for decision
     log_audit(db, claim.user_id, "Claim Decision", {
         "claim_id": claim_id,
-        "risk_score": risk_score,
+        "routing_decision": decision_payload.get("routing_decision"),
         "decision": claim.decision,
         "status": claim.status
     })

@@ -598,7 +598,6 @@ def calculate_score(policy_matches: list[dict], visual_findings: dict, amount_re
         f"- Visual Findings: {json.dumps(visual_findings)}\n"
         f"- Amount Requested (in INR): ₹{amount_requested}\n"
         f"- Live External API Verifications: {json.dumps(external_verification)}\n"
-        f"- Independent Fraud ML Service Probability Score: {external_verification.get('ml_fraud_probability', 'N/A')}\n"
     )
 
     max_retries = 5

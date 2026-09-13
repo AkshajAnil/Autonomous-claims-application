@@ -30,66 +30,6 @@ def is_gemini_quota_error(exc: Exception) -> bool:
     return "429" in message or "resourceexhausted" in message or "rate-limited" in message
 
 
-def extract_ml_features(claim: Claim, db: Session, policy_matches: list, visual_findings: dict, external_verification: dict) -> dict:
-    months_cust = 12.0
-    now = datetime.datetime.utcnow()
-    if claim.user and claim.user.created_at:
-        delta_days = (now - claim.user.created_at).days
-        months_cust = max(1.0, float(delta_days / 30.0))
-
-    claim_amt = float(claim.amount_requested or 10000.0)
-    
-    red_flags = []
-    if isinstance(visual_findings, dict) and visual_findings.get("red_flags"):
-        red_flags = visual_findings.get("red_flags")
-        
-    has_damage = "YES" if red_flags or (isinstance(visual_findings, dict) and visual_findings.get("findings")) else "NO"
-    has_police_report = "YES" if claim.evidence and len(claim.evidence) > 0 else "NO"
-    
-    severity = "Minor Damage"
-    if claim_amt > 50000 or len(red_flags) > 1:
-        severity = "Major Damage"
-    elif claim_amt > 80000:
-        severity = "Total Loss"
-
-    inc_type = "Single Vehicle Collision"
-    if claim.claim_type:
-        inc_type = claim.claim_type
-        
-    return {
-        "months_as_customer": months_cust,
-        "age": 35.0,
-        "policy_csl": "250/500",
-        "policy_deductable": 1000.0,
-        "policy_annual_premium": 1200.0,
-        "umbrella_limit": 0.0,
-        "insured_sex": "FEMALE",
-        "insured_education_level": "College",
-        "insured_occupation": "exec-managerial",
-        "insured_hobbies": "reading",
-        "insured_relationship": "husband",
-        "capital_gains": 0.0,
-        "capital_loss": 0.0,
-        "incident_type": inc_type,
-        "collision_type": "Side Collision",
-        "incident_severity": severity,
-        "authorities_contacted": "Police",
-        "incident_hour_of_the_day": 14.0,
-        "number_of_vehicles_involved": 1.0,
-        "property_damage": has_damage,
-        "bodily_injuries": 0.0,
-        "witnesses": 1.0,
-        "police_report_available": has_police_report,
-        "total_claim_amount": claim_amt,
-        "injury_claim": claim_amt * 0.2,
-        "property_claim": claim_amt * 0.5,
-        "vehicle_claim": claim_amt * 0.3,
-        "auto_make": "Toyota",
-        "auto_model": "Camry",
-        "auto_year": 2018.0
-    }
-
-
 VERIFICATION_MATRIX = {
     "Auto": {
         "location": "REQUIRED",
@@ -145,6 +85,138 @@ def get_claim_verification_rules(claim: Claim) -> dict[str, str]:
         rules["event"] = "REQUIRED"
         
     return rules
+
+
+def _normalize_tool_payload(payload: Any) -> dict:
+    if isinstance(payload, dict):
+        return payload
+    return {}
+
+
+def build_investigation_summary(
+    claim: Claim,
+    policy_matches: list,
+    visual_findings: dict,
+    external_verification: dict,
+    verifications_payload: dict,
+) -> str:
+    summary_parts = [
+        f"Agentic investigation completed for {claim.claimant_name}'s {claim.claim_type} claim.",
+    ]
+
+    if policy_matches:
+        summary_parts.append("Policy retrieval returned relevant coverage context.")
+
+    loc = verifications_payload.get("location", {})
+    if loc.get("status") == "PASSED":
+        summary_parts.append(loc.get("reason", "Location verification passed.").rstrip("."))
+    elif loc.get("status") == "FAILED":
+        summary_parts.append(loc.get("reason", "Location verification failed.").rstrip("."))
+
+    weather = verifications_payload.get("weather", {})
+    if weather.get("status") in {"PASSED", "FAILED", "UNKNOWN"}:
+        summary_parts.append(weather.get("reason", "Weather verification completed.").rstrip("."))
+
+    disaster = verifications_payload.get("disaster", {})
+    if disaster.get("status") in {"PASSED", "FAILED", "UNKNOWN"}:
+        summary_parts.append(disaster.get("reason", "Disaster verification completed.").rstrip("."))
+
+    event = verifications_payload.get("event", {})
+    if event.get("status") in {"PASSED", "FAILED", "UNKNOWN"}:
+        summary_parts.append(event.get("reason", "Event verification completed.").rstrip("."))
+
+    red_flags = visual_findings.get("red_flags", []) if isinstance(visual_findings, dict) else []
+    if red_flags:
+        summary_parts.append(f"Visual analysis reported {len(red_flags)} issue(s): {', '.join(map(str, red_flags[:3]))}")
+    elif visual_findings:
+        summary_parts.append("Visual evidence did not report material red flags.")
+
+    return " ".join(part.rstrip(".") + "." for part in summary_parts if part)
+
+
+def build_agentic_decision_payload(
+    claim: Claim,
+    policy_matches: list,
+    visual_findings: dict,
+    external_verification: dict,
+    verifications_payload: dict,
+) -> dict:
+    visual_findings = _normalize_tool_payload(visual_findings)
+    external_verification = _normalize_tool_payload(external_verification)
+
+    failed_required = [
+        name for name, data in verifications_payload.items()
+        if data.get("status") == "FAILED"
+    ]
+    unknown_required = [
+        name for name, data in verifications_payload.items()
+        if data.get("status") == "UNKNOWN"
+    ]
+    red_flags = visual_findings.get("red_flags") or []
+    if not isinstance(red_flags, list):
+        red_flags = [str(red_flags)]
+
+    fraud_indicators = []
+    if failed_required:
+        fraud_indicators.append("Failed required verification: " + ", ".join(failed_required))
+    if unknown_required:
+        fraud_indicators.append("Required verification unavailable: " + ", ".join(unknown_required))
+    if red_flags:
+        fraud_indicators.extend(str(flag) for flag in red_flags[:5])
+
+    policy_verified = bool(policy_matches)
+    identity_verified = bool(claim.user and claim.user.is_identity_verified)
+    documents_verified = not red_flags
+    investigation_summary = build_investigation_summary(
+        claim,
+        policy_matches,
+        visual_findings,
+        external_verification,
+        verifications_payload,
+    )
+
+    if failed_required:
+        routing_decision = "investigate"
+        recommended_action = "ADJUSTER_REVIEW"
+        decision_reason = (
+            "Agentic workflow requires manual review because one or more required "
+            f"verification checks failed: {', '.join(failed_required)}."
+        )
+    elif unknown_required or red_flags or not policy_verified:
+        routing_decision = "investigate"
+        recommended_action = "ADJUSTER_REVIEW"
+        reasons = []
+        if unknown_required:
+            reasons.append(f"unavailable required checks: {', '.join(unknown_required)}")
+        if red_flags:
+            reasons.append("visual evidence red flags")
+        if not policy_verified:
+            reasons.append("policy context unavailable")
+        decision_reason = "Agentic workflow routed the claim to adjuster review due to " + "; ".join(reasons) + "."
+    else:
+        routing_decision = "auto_approve"
+        recommended_action = "AUTO_APPROVE"
+        decision_reason = (
+            "Agentic workflow found no failed required verifications, no material visual red flags, "
+            "and relevant policy context was retrieved."
+        )
+
+    return {
+        "fraud_risk_score": None,
+        "routing_decision": routing_decision,
+        "decision_reason": decision_reason,
+        "summary": investigation_summary,
+        "confidence_score": None,
+        "missing_documents": red_flags,
+        "fraud_indicators": fraud_indicators,
+        "recommended_action": recommended_action,
+        "verification_report": {
+            "policy_verified": policy_verified,
+            "identity_verified": identity_verified,
+            "documents_verified": documents_verified,
+            "history_analysis": "Claim history reviewed by the agentic workflow.",
+        },
+    }
 
 
 def _unwrap_mcp_tool_result(res: Any, tool_name: str) -> Any:
@@ -229,7 +301,7 @@ async def run_direct_investigation(
     return policy_matches, visual_findings, external_verification
 
 
-async def run_claim_agent(db_factory, claim_id: str) -> None:
+async def run_claim_agent(db_factory, claim_id: str) -> dict[str, Any] | None:
     db: Session = db_factory()
     fallback_reasons = []
     try:
@@ -396,6 +468,20 @@ async def run_claim_agent(db_factory, claim_id: str) -> None:
             for attempt in range(max_retries):
                 try:
                     await agent_executor.ainvoke(inputs)
+                    # A prompt cannot guarantee that an LLM invoked each
+                    # required tool. Complete any skipped investigation step
+                    # deterministically before scoring the claim.
+                    if not policy_matches or not visual_findings or not external_verification:
+                        fallback_reasons.append("LangChain skipped one or more required tools")
+                        policy_matches, visual_findings, external_verification = await run_direct_investigation(
+                            mcp,
+                            db,
+                            claim_id,
+                            claim,
+                            incident_date,
+                            location_val,
+                            fallback_reasons,
+                        )
                     break
                 except Exception as exc:
                     exc_str = str(exc)
@@ -415,105 +501,6 @@ async def run_claim_agent(db_factory, claim_id: str) -> None:
                     )
                     break
 
-        # 3. Run Fraud ML Service
-        ml_features = extract_ml_features(claim, db, policy_matches, visual_findings, external_verification)
-        
-        from app.ml_service import predict_fraud_probability
-        try:
-            ml_res = predict_fraud_probability(ml_features)
-        except Exception as exc:
-            print("Fraud ML Service execution failed:", exc)
-            fallback_reasons.append("XGBoost Fraud ML Service Failed")
-            ml_res = {"fraud_probability": 0.25, "risk_score": 25, "recommendation": "AUTO_APPROVE", "shap_explanations": [{"feature": "claim_amount", "impact": 0.2}]}
-            
-        add_event(db, claim_id, "fraud_model", "Fraud Model Completed", "running")
-
-        # 4. Risk Scoring Service (Merge AI findings + ML score)
-        async with McpClient() as mcp:
-            # Inject ML results into external_verification for the Gemini prompt
-            external_verification["ml_fraud_probability"] = ml_res["fraud_probability"] * 100.0
-            external_verification["ml_risk_level"] = "HIGH" if ml_res["risk_score"] > 70 else ("MEDIUM" if ml_res["risk_score"] >= 30 else "LOW")
-            external_verification["ml_top_features"] = [item["feature"] for item in ml_res.get("shap_explanations", [])[:3]]
-            
-            past_claims = db.query(Claim).filter(Claim.user_id == claim.user_id, Claim.id != claim.id).all()
-            history_summary = [
-                {"id": pc.id, "type": pc.claim_type, "amount": pc.amount_requested, "status": pc.status, "date": pc.created_at.isoformat()}
-                for pc in past_claims
-            ]
-            external_verification["claim_history"] = history_summary
-            external_verification["identity_verified"] = bool(claim.user.is_identity_verified)
-
-            final_decision_payload = None
-            for attempt in range(max_retries):
-                try:
-                    final_decision_payload = await mcp.call_tool("fraud_risk_score", {
-                        "policy_matches": policy_matches,
-                        "visual_findings": visual_findings,
-                        "amount_requested": claim.amount_requested,
-                        "external_verification": external_verification
-                    })
-                    break
-                except Exception as exc:
-                    exc_str = str(exc)
-                    print(f"Risk Scoring MCP Tool failed: {exc}. Using rule-based fallback decision.")
-                    if is_gemini_quota_error(exc):
-                        fallback_reasons.append("Gemini quota exhausted on both primary and backup keys; ML/rule-based scoring used")
-                    else:
-                        fallback_reasons.append("Gemini Risk Scoring Unavailable")
-                    fallback_score = int(ml_res["fraud_probability"] * 100)
-                    if claim.amount_requested > 70000:
-                        fallback_score = max(fallback_score, 75)
-
-                    summary_parts = []
-                    loc_data = external_verification.get("location_verification") or {}
-                    if loc_data.get("valid"):
-                        summary_parts.append(f"Location verified for {location_val}")
-                    weather_data = external_verification.get("weather_verification") or {}
-                    if weather_data.get("weather_verified"):
-                        summary_parts.append(
-                            f"Weather archive confirmed {weather_data.get('rain_mm', 0)}mm rain and "
-                            f"{weather_data.get('wind_kmh', 0)}km/h wind"
-                        )
-                    disaster_data = external_verification.get("disaster_verification") or {}
-                    if disaster_data.get("disaster_verified"):
-                        active = disaster_data.get("disasters_active") or []
-                        if active:
-                            summary_parts.append(f"{len(active)} GDACS disaster alert(s) active in the search window")
-                        else:
-                            summary_parts.append("No active regional disasters reported for the incident date")
-                    event_data = external_verification.get("event_verification") or {}
-                    if event_data.get("event_verified"):
-                        summary_parts.append(event_data.get("details", "Event verification passed"))
-
-                    investigation_summary = ". ".join(summary_parts) + "." if summary_parts else (
-                        "Investigation completed using ML scoring and external verification APIs."
-                    )
-
-                    final_decision_payload = {
-                        "fraud_risk_score": fallback_score,
-                        "routing_decision": "auto_approve" if fallback_score < 30 else "investigate",
-                        "decision_reason": (
-                            f"Rule-based decision from XGBoost ML score ({fallback_score}/100) "
-                            "and completed external verification checks."
-                        ),
-                        "summary": investigation_summary,
-                        "confidence_score": 0.85,
-                        "missing_documents": visual_findings.get("red_flags", []) if isinstance(visual_findings, dict) else [],
-                        "fraud_indicators": ["High Requested Amount"] if fallback_score > 70 else [],
-                        "recommended_action": "FRAUD_INVESTIGATION" if fallback_score > 70 else "ADJUSTER_REVIEW",
-                        "verification_report": {
-                            "policy_verified": bool(policy_matches),
-                            "identity_verified": bool(claim.user.is_identity_verified),
-                            "documents_verified": not visual_findings.get("red_flags") if isinstance(visual_findings, dict) else True,
-                            "history_analysis": "No previous fraud detected",
-                        },
-                    }
-                    break
-            
-            add_event(db, claim_id, "risk_assessment", "Final Risk Assessment Generated", "done")
-
-
-        
         # Translate verifications
         rules = get_claim_verification_rules(claim)
         verifications_payload = {}
@@ -685,96 +672,65 @@ async def run_claim_agent(db_factory, claim_id: str) -> None:
                     "source": e_data.get("source", "Google News RSS Feed"),
                     "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
                     "reason": e_data.get("details", "No public event matched the incident description.")
-                }        # Execute Universal Risk Engine v4.0 Pipeline
-        from app.workflow_planner import WorkflowPlanner
-        from app.domain_features import DomainFeatureExtractor
-        from app.evidence_collector import EvidenceCollector
-        from app.verification_status import VerificationStatusManager
-        from app.feature_extractor import UniversalFeatureExtractor
-        from app.fraud_predictor import RuleBasedFraudPredictor
-        from app.evidence_confidence import EvidenceConfidenceCalculator
-        from app.decision_engine import DecisionEngine
+                }
 
-        wf_plan = WorkflowPlanner().plan(claim.claim_type or "", claim.description or "")
+        past_claims = db.query(Claim).filter(Claim.user_id == claim.user_id, Claim.id != claim.id).all()
+        external_verification["claim_history"] = [
+            {"id": pc.id, "type": pc.claim_type, "amount": pc.amount_requested, "status": pc.status, "date": pc.created_at.isoformat()}
+            for pc in past_claims
+        ]
+        external_verification["identity_verified"] = bool(claim.user and claim.user.is_identity_verified)
 
-        collector = EvidenceCollector()
-        collector.add_gemini_analysis(visual_findings if isinstance(visual_findings, dict) else {})
-        collector.add_weather_verification(external_verification.get("weather_verification") or {})
-        collector.add_location_verification(external_verification.get("location_verification") or {})
-        collector.add_disaster_verification(external_verification.get("disaster_verification") or {})
-        collector.add_news_verification(external_verification.get("event_verification") or {})
-        collector.add_policy_rag(policy_matches or [])
-
-        v_manager = VerificationStatusManager()
-        if external_verification.get("weather_verification", {}).get("available"):
-            v_manager.set_status("weather", "SUCCESS" if external_verification["weather_verification"].get("weather_verified") else "FAILED")
-        if external_verification.get("location_verification"):
-            v_manager.set_status("location", "SUCCESS" if external_verification["location_verification"].get("valid") else "FAILED")
-        if external_verification.get("disaster_verification", {}).get("available"):
-            v_manager.set_status("gdacs", "SUCCESS" if external_verification["disaster_verification"].get("disaster_verified") else "NO_MATCH")
-        if external_verification.get("event_verification", {}).get("available"):
-            v_manager.set_status("news", "SUCCESS" if external_verification["event_verification"].get("event_verified") else "NO_MATCH")
-        v_manager.set_status("gemini_vision", "SUCCESS" if visual_findings else "FAILED")
-        v_manager.set_status("ocr", "SUCCESS" if visual_findings else "FAILED")
-
-        evidence_dict = collector.to_dict()
-        status_dict = v_manager.to_dict()
-
-        extractor = UniversalFeatureExtractor()
-        univ_features = extractor.extract(claim, evidence_dict, status_dict)
-
-        # Synchronize Verification Checklist statuses with Extracted Features
-        if univ_features.get("gps_mismatch", {}).get("value"):
-            verifications_payload["location"] = {
-                "status": "FAILED",
-                "source": "Location Verification Engine",
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                "reason": "Location conflict detected between declared location and incident evidence."
-            }
-        if univ_features.get("weather_contradiction", {}).get("value"):
-            verifications_payload["weather"] = {
-                "status": "FAILED",
-                "source": "Open-Meteo Weather Archive",
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-                "reason": "Historical weather archive contradicts claimed weather conditions."
-            }
-
-        dom_extractor = DomainFeatureExtractor()
-        dom_features = dom_extractor.extract(claim, wf_plan["domain"], wf_plan["category"], evidence_dict)
-
-        predictor = RuleBasedFraudPredictor()
-        risk_res = predictor.predict(univ_features)
-
-        conf_calc = EvidenceConfidenceCalculator()
-        evid_conf = conf_calc.calculate(univ_features, status_dict)
-
-        dec_engine = DecisionEngine()
-        dec_res = dec_engine.evaluate(risk_res["risk_score"], evid_conf, risk_res["triggered_rules"])
-
-        # Override summary with Decision Reason for total transparency
-        final_decision_payload["summary"] = dec_res.get("decision_reason", final_decision_payload.get("summary"))
-        final_decision_payload["decision_reason"] = dec_res.get("decision_reason", final_decision_payload.get("decision_reason"))
+        async with McpClient() as mcp:
+            try:
+                final_decision_payload = await mcp.call_tool("fraud_risk_score", {
+                    "policy_matches": policy_matches,
+                    "visual_findings": visual_findings,
+                    "amount_requested": claim.amount_requested,
+                    "external_verification": external_verification
+                })
+            except Exception as exc:
+                print(f"Agentic adjudication MCP tool failed: {exc}. Using deterministic agentic workflow decision.")
+                if is_gemini_quota_error(exc):
+                    fallback_reasons.append("Gemini quota exhausted on both primary and backup keys; deterministic agentic workflow used")
+                else:
+                    fallback_reasons.append("Gemini Adjudication Unavailable")
+                final_decision_payload = build_agentic_decision_payload(
+                    claim,
+                    policy_matches,
+                    visual_findings,
+                    external_verification,
+                    verifications_payload,
+                )
 
         if final_decision_payload:
-            top_features_list = dec_res.get("top_positive", []) + dec_res.get("top_negative", [])
+            final_decision_payload = _normalize_tool_payload(final_decision_payload)
+            if not final_decision_payload.get("summary"):
+                final_decision_payload["summary"] = build_investigation_summary(
+                    claim,
+                    policy_matches,
+                    visual_findings if isinstance(visual_findings, dict) else {},
+                    external_verification,
+                    verifications_payload,
+                )
+            if not final_decision_payload.get("decision_reason"):
+                final_decision_payload["decision_reason"] = "Agentic adjudication completed using policy, visual, history, and external verification tools."
+
+        add_event(db, claim_id, "agentic_adjudication", "Agentic Adjudication Completed", "done")
+
+        if final_decision_payload:
             fallback_reason_str = "; ".join(fallback_reasons) if fallback_reasons else None
             apply_decision(
                 db, 
                 claim_id, 
                 final_decision_payload, 
-                float(risk_res["risk_score"]) / 100.0, 
-                top_features_list,
                 fallback_reason=fallback_reason_str,
                 verifications=verifications_payload,
-                image_anomaly_score=0.1,
-                ocr_consistency_score=0.95,
-                evidence=evidence_dict,
-                verification_status=status_dict,
-                universal_features=univ_features,
-                domain_features=dom_features,
-                risk_result=risk_res,
-                evidence_confidence=evid_conf,
-                decision_result=dec_res
+                evidence={
+                    "policy_matches": policy_matches,
+                    "visual_findings": visual_findings,
+                    "external_verification": external_verification,
+                },
             )
 
         else:
@@ -783,6 +739,13 @@ async def run_claim_agent(db_factory, claim_id: str) -> None:
         # Refresh claim status to display in audit logs
         db.refresh(claim)
         log_audit(db, claim.user_id, "AI Investigation Completed", {"claim_id": claim_id, "status": claim.status})
+        return {
+            "policy_matches": policy_matches,
+            "visual_findings": visual_findings,
+            "external_verification": external_verification,
+            "final_decision_payload": final_decision_payload,
+            "verifications_payload": verifications_payload,
+        }
 
     except Exception as exc:
         import traceback

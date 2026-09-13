@@ -70,7 +70,6 @@ class ClaimOut(BaseModel):
     fraud_probability: float | None = None
     decision: str | None = None
     investigation_summary: str | None = None
-    shap_explanations: dict | list | None = None
     processing_timestamp: datetime | None = None
     
     # Verification Statuses & Metadata
@@ -80,15 +79,7 @@ class ClaimOut(BaseModel):
     event_verification_status: str | None = None
     verification_metadata: dict | list | None = None
     
-    # Universal Risk Engine v4.0 Fields
-    evidence_confidence: float | None = None
-    reason_code: str | None = None
-    triggered_rules: list | None = None
-    top_positive: list | None = None
-    top_negative: list | None = None
     next_actions: list | None = None
-    universal_features: dict | None = None
-    domain_features: dict | None = None
     raw_evidence: dict | None = None
     workflow_version: str | None = None
     
@@ -156,36 +147,6 @@ class UserCreate(BaseModel):
     username: str
     password: str
     expected_role: str | None = None
-
-
-class PredictRequest(BaseModel):
-    customer_tenure: float | None = None
-    policy_age: float | None = None
-    previous_claims: int | None = None
-    policy_type: str | None = None
-    insurance_type: str | None = None
-    claim_amount: float | None = None
-    claim_submission_delay: int | None = None
-    incident_location: str | None = None
-    incident_date: str | None = None
-    weather_verified: bool | None = None
-    location_verified: bool | None = None
-    disaster_verified: bool | None = None
-    image_anomaly_score: float | None = None
-    ocr_consistency_score: float | None = None
-    missing_document_count: int | None = None
-
-
-class ShapExplanation(BaseModel):
-    feature: str
-    impact: float
-
-
-class PredictResponse(BaseModel):
-    fraud_probability: float
-    risk_score: int
-    recommendation: str
-    shap_explanations: list[ShapExplanation]
 
 
 class AuditLogOut(BaseModel):

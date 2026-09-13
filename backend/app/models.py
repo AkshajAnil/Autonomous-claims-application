@@ -40,7 +40,7 @@ class Claim(Base):
     incident_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     incident_location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     
-    # AI/ML Outputs
+    # Agentic AI outputs
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     extracted_info: Mapped[str | None] = mapped_column(Text, nullable=True)  # Store as JSON string
     fraud_risk_score: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -57,6 +57,7 @@ class Claim(Base):
     fraud_probability: Mapped[float | None] = mapped_column(Float, nullable=True)
     decision: Mapped[str | None] = mapped_column(String(80), nullable=True)
     investigation_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Legacy nullable column kept for existing databases; no active workflow writes ML explanations.
     shap_explanations: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
     processing_timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     
